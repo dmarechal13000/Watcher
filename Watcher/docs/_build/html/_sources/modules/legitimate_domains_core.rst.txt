@@ -1,0 +1,4 @@
+Legitimate Domains - Core Algorithm
+====================================
+.. automodule:: Watcher.common.core
+    :members:
