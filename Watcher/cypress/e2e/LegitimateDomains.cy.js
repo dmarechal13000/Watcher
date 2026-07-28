@@ -573,6 +573,33 @@ describe('Legitimate Domains - E2E Test Suite', () => {
 
   });
 
+  describe('MISP Export Modal Reset Behavior', () => {
+    it('should completely reset the modal and title when clicking a different domain', () => {
+      cy.get('table tbody tr').eq(0).within(() => {
+        cy.get('button[title*="Export"], button[title*="MISP"], i.material-icons:contains("cloud_download")').first().click({ force: true });
+      });
+
+      cy.get('.modal', { timeout: 10000 }).should('be.visible');
+      cy.get('table tbody tr').eq(0).find('td').first().invoke('text').then((firstDomain) => {
+        cy.get('.modal-title').should('contain', firstDomain.trim());
+      });
+
+      cy.get('.modal button:contains("Close"), .modal .btn-close').first().click();
+      cy.get('.modal').should('not.exist');
+
+      cy.get('table tbody tr').eq(1).within(() => {
+        cy.get('button[title*="Export"], button[title*="MISP"], i.material-icons:contains("cloud_download")').first().click({ force: true });
+      });
+
+      cy.get('.modal', { timeout: 10000 }).should('be.visible');
+      cy.get('table tbody tr').eq(1).find('td').first().invoke('text').then((secondDomain) => {
+        cy.get('.modal-title').should('contain', secondDomain.trim());
+      });
+
+      cy.get('.modal button:contains("Close"), .modal .btn-close').first().click();
+    });
+  });
+  
   describe('Data Interaction and Workflow', () => {
     it('should handle repurchased status change workflow', () => {
       cy.get('table tbody tr').eq(1).within(() => {
