@@ -197,6 +197,7 @@ INSTALLED_APPS = [
     'connectors',
     'drf_spectacular',
     'mozilla_django_oidc',
+    'llm_gateway',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
