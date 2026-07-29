@@ -116,16 +116,21 @@ class LegitimateDomainViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='misp')
     def export_to_misp(self, request):
         """
-        Export legitimate domain to MISP using DNS Finder's logic.
+        Export legitimate domain to MISP using the dedicated Common serializer.
         """
-        from dns_finder.api import MISPViewSet
-        from dns_finder.serializers import MISPSerializer
+        from .serializers import LegitimateDomainMISPSerializer
         import logging
         
         logger = logging.getLogger(__name__)
         
         domain_id = request.data.get('id')
         event_uuid = request.data.get('event_uuid', '')
+
+        if event_uuid in ["string", ""]:
+            event_uuid = ""
+            if hasattr(request.data, '_mutable'):
+                request.data._mutable = True
+            request.data['event_uuid'] = ""
         
         if not domain_id:
             return Response({
@@ -142,50 +147,40 @@ class LegitimateDomainViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_404_NOT_FOUND)
         
         try:
-            misp_viewset = MISPViewSet()
-            misp_viewset.request = request
-            misp_viewset.format_kwarg = None
-            
             misp_data = {
                 'id': domain.id,
-                'event_uuid': event_uuid,
-                'domain_name': domain.domain_name,
-                'fuzzer': 'legitimate_domain',
-                'dns_monitored': None,
-                'keyword_monitored': None
+                'event_uuid': event_uuid
             }
             
-            serializer = MISPSerializer(data=misp_data)
+            serializer = LegitimateDomainMISPSerializer(data=misp_data)
             
             if serializer.is_valid():
-                misp_response = misp_viewset.create(request)
+                response_data = serializer.save()
                 
-                if misp_response.status_code in [200, 201]:
-                    response_data = misp_response.data
+                # Update domain with new MISP UUID
+                if response_data.get('misp_event_uuid'):
+                    current_uuids = domain.misp_event_uuid or []
+                    if isinstance(current_uuids, str):
+                        current_uuids = [u.strip() for u in current_uuids.replace('[', '').replace(']', '').replace("'", '').split(',') if u.strip()]
                     
-                    # Update domain with new MISP UUID
-                    if response_data.get('misp_event_uuid'):
-                        current_uuids = domain.misp_event_uuid or []
-                        if isinstance(current_uuids, str):
-                            current_uuids = [u.strip() for u in current_uuids.replace('[', '').replace(']', '').replace("'", '').split(',') if u.strip()]
-                        
-                        new_uuid = response_data['misp_event_uuid']
-                        if new_uuid not in current_uuids:
-                            current_uuids.append(new_uuid)
-                        
-                        domain.misp_event_uuid = current_uuids
-                        domain.save()
-                        
-                        return Response({
-                            'status': 'success',
-                            'message': response_data.get('message', f'{domain.domain_name} exported to MISP successfully'),
-                            'misp_event_uuid': new_uuid
-                        }, status=status.HTTP_200_OK)
+                    new_uuid = response_data['misp_event_uuid']
+                    if new_uuid not in current_uuids:
+                        current_uuids.append(new_uuid)
+                    
+                    domain.misp_event_uuid = current_uuids
+                    domain.save()
+                    
+                    return Response({
+                        'status': 'success',
+                        'message': response_data.get('message', f'{domain.domain_name} exported to MISP successfully'),
+                        'misp_event_uuid': new_uuid
+                    }, status=status.HTTP_200_OK)
                 else:
                     return Response({
                         'status': 'error',
-                        'message': 'Failed to export to MISP'
+                        'message': 'Event saved but no UUID returned from MISP.'
                     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
             else:
                 logger.error(f"Serializer errors: {serializer.errors}")
                 return Response({
@@ -200,7 +195,6 @@ class LegitimateDomainViewSet(viewsets.ModelViewSet):
                 'status': 'error',
                 'message': 'An internal error occurred during MISP export.'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 def _record_resolution_event(pa, user):
     """

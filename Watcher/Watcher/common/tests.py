@@ -10,6 +10,26 @@ from knox.models import AuthToken
 from common.models import MISPEventUuidLink, LegitimateDomain, PendingAction
 from common.core import generate_ref
 from common.misp import get_misp_uuid, update_misp_uuid
+from common.serializers import LegitimateDomainSerializer
+
+
+class LegitimateDomainSerializerTest(TestCase):
+    """Test LegitimateDomainSerializer data formatting."""
+
+    def test_misp_event_uuid_format(self):
+        """
+        Verify that the serializer properly flattens nested lists 
+        and converts None values into a clean string to prevent frontend crashes.
+        """
+        domain = LegitimateDomain(
+            domain_name="test-format-robuste.com",
+            misp_event_uuid=[["uuid-1"], "uuid-2", None] 
+        )
+
+        serializer = LegitimateDomainSerializer(domain)
+        data = serializer.data
+
+        self.assertEqual(data['misp_event_uuid'], "uuid-1, uuid-2")
 
 
 class MISPEventUuidLinkModelTest(TestCase):

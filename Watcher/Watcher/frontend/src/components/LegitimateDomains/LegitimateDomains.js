@@ -1078,6 +1078,7 @@ class LegitimateDomains extends Component {
                     label={this.state.timelineDomain?.domain_name}
                 />
                 <ExportModal
+                    key={this.state.exportDomain ? this.state.exportDomain.id : 'export-modal-default'}
                     show={this.state.showExportModal}
                     domain={this.state.exportDomain}
                     onClose={this.closeExportModal}
