@@ -173,6 +173,25 @@ WEEKLY_SUMMARY_HOUR = os.environ.get('WEEKLY_SUMMARY_HOUR', '09:30')
 # Breaking News Configuration
 BREAKING_NEWS_THRESHOLD = int(os.environ.get('BREAKING_NEWS_THRESHOLD', 15))
 
+#Configuration LLM
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+OPENAI_MODEL = os.environ.get('OPENAI_MODEL', '')
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL', '')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', '')
+OLLAMA_API_URL = os.environ.get('OLLAMA_API_URL', '')
+OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', '')
+HF_LOCAL_MODEL = os.environ.get('HF_LOCAL_MODEL', 'Qwen/Qwen2.5-0.5B')
+
+#Configuration LLM enterprise
+COMPANY_LLM_URL = os.environ.get('COMPANY_LLM_URL', '')
+COMPANY_LLM_KEY = os.environ.get('COMPANY_LLM_KEY', '')
+COMPANY_MODEL = os.environ.get('COMPANY_MODEL', '')
+
+DEFAULT_LLM_PROVIDER = os.environ.get('DEFAULT_LLM_PROVIDER', '')
+FALLBACK_LLM_PROVIDER = os.environ.get('FALLBACK_LLM_PROVIDER', 'huggingface_local')
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.contenttypes',
