@@ -8,8 +8,18 @@ class GeminiProvider(BaseLLMProvider):
     
     def __init__(self):
         self.api_key = getattr(settings, 'GEMINI_API_KEY', None)
-        self.client = genai.Client(api_key=self.api_key) if self.api_key else None
+        self.base_url = getattr(settings, 'GEMINI_BASE_URL', None)
         self.configured_model = getattr(settings, 'GEMINI_MODEL', '')
+        
+        if self.api_key:
+            client_kwargs = {"api_key": self.api_key}
+            
+            if self.base_url:
+                client_kwargs["http_options"] = {"base_url": self.base_url}
+                
+            self.client = genai.Client(**client_kwargs)
+        else:
+            self.client = None
 
     def get_name(self) -> str:
         return "gemini"
