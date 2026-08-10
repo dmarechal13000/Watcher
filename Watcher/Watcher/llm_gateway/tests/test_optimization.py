@@ -54,36 +54,47 @@ class OptimizationTests(TestCase):
         self.assertIn("WARNING: Remaining logs truncated", truncated)
         self.assertNotIn("Line 5", truncated)
 
-    @patch('llm_gateway.services.analyzer.llm_router.generate_text')
-    def test_analyzer_stops_at_level_1_if_safe(self, mock_generate_text):
-        """Test smart routing: stops at Level 1 if no threat is detected."""
-        mock_generate_text.return_value = "NO"
+    def test_prompt_builder_format(self):
+        """Test that the prompt builder correctly formats logs with strict system instructions."""
+        safe_logs_string = '{"ip": "192.168.1.100", "event": "brute_force_attempt"}'
         
-        service = SecurityAnalyzerService()
-        result = service.analyze([{"event": "normal_login"}])
+        prompt = PromptBuilder.build_security_analysis_prompt(safe_logs_string)
         
-        self.assertFalse(result["threat_detected"])
-        self.assertFalse(result["routed_to_advanced_llm"])
-        self.assertEqual(mock_generate_text.call_count, 1)
+        self.assertIsInstance(prompt, str)
+        
+        self.assertIn("You are a strict cybersecurity AI", prompt)
+        self.assertIn("EXPECTED OUTPUT FORMAT", prompt)
+        self.assertIn('"threat_detected": boolean', prompt)
+        
+        self.assertIn("192.168.1.100", prompt)
+        self.assertIn("brute_force_attempt", prompt)
 
-    @patch('llm_gateway.services.analyzer.llm_router.generate_text')
-    def test_analyzer_escalates_to_level_2_if_threat(self, mock_generate_text):
-        """Test smart routing: escalates to Level 2 if a threat is suspected."""
-        mock_generate_text.side_effect = [
-            "YES", 
-            json.dumps({
-                "threat_detected": True,
-                "severity": "high",
-                "attack_type": "brute_force",
-                "summary": "Multiple failed logins detected.",
-                "recommended_action": "Block IP"
-            })
-        ]
+
+    @patch('llm_gateway.services.analyzer.SecurityAnalyzerService._call_remote_llm')
+    def test_analyzer_successful_remote_analysis(self, mock_call_remote):
+        """Test that the analysis via the remote connector succeeds."""
+        mock_call_remote.return_value = "Analysis complete: No threat detected."
         
         service = SecurityAnalyzerService()
-        result = service.analyze([{"event": "login_failed", "ip": "malicious"}])
+        result = service.analyze([{"event": "normal_login"}], active_connector_id="openai_llm")
         
-        self.assertTrue(result["threat_detected"])
-        self.assertTrue(result["routed_to_advanced_llm"])
-        self.assertEqual(result["severity"], "high")
-        self.assertEqual(mock_generate_text.call_count, 2)
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["source"], "openai_llm")
+        self.assertEqual(result["analysis"], "Analysis complete: No threat detected.")
+        mock_call_remote.assert_called_once()
+
+    @patch('llm_gateway.services.analyzer.SecurityAnalyzerService._call_local_fallback')
+    @patch('llm_gateway.services.analyzer.SecurityAnalyzerService._call_remote_llm')
+    def test_analyzer_triggers_fallback_on_failure(self, mock_call_remote, mock_call_fallback):
+        """Test that the system falls back to the local model if the remote API fails."""
+        mock_call_remote.side_effect = Exception("API Down or Invalid Key")
+        mock_call_fallback.return_value = "Local fallback analysis."
+        
+        service = SecurityAnalyzerService()
+        result = service.analyze([{"event": "login_failed"}], active_connector_id="broken_llm")
+        
+        self.assertEqual(result["status"], "degraded")
+        self.assertEqual(result["source"], "local_fallback")
+        self.assertEqual(result["analysis"], "Local fallback analysis.")
+        mock_call_remote.assert_called_once()
+        mock_call_fallback.assert_called_once()

@@ -177,14 +177,19 @@ BREAKING_NEWS_THRESHOLD = int(os.environ.get('BREAKING_NEWS_THRESHOLD', 15))
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL', '')
 OPENAI_BASE_URL = os.environ.get('OPENAI_BASE_URL', '')
+
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL', '')
 ANTHROPIC_BASE_URL = os.environ.get('ANTHROPIC_BASE_URL', '')
+
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 GEMINI_MODEL = os.environ.get('GEMINI_MODEL', '')
 GEMINI_BASE_URL = os.environ.get('GEMINI_BASE_URL', '')
+
 OLLAMA_API_URL = os.environ.get('OLLAMA_API_URL', '')
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', '')
+OLLAMA_API_KEY = os.environ.get('OLLAMA_API_KEY', '')
+
 HF_LOCAL_MODEL = os.environ.get('HF_LOCAL_MODEL', 'Qwen/Qwen2.5-0.5B')
 
 #Configuration LLM enterprise

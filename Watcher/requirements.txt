@@ -51,9 +51,7 @@ mozilla-django-oidc==5.0.2
 numpy==1.26.4
 
 #LLM Gateway
-openai==2.50.0
-anthropic==0.120.2
-google-genai==2.15.0
 requests==2.34.2
-accelerate==1.14.0
+litellm>=1.95.0
+openai==2.53.0
 tiktoken==0.13.0

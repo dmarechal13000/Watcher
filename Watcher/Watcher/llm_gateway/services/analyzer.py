@@ -1,64 +1,97 @@
-import json
 import logging
-from django.conf import settings
-from llm_gateway.router import llm_router
+import litellm
+
+from llm_gateway.exceptions import (
+    LLMAuthenticationError, 
+    LLMConnectionError, 
+    LLMQuotaExceededError, 
+    LLMGatewayError
+)
+
+from connectors.models import ConnectorOverride
+
+from llm_gateway.utils.prompt_builder import PromptBuilder
 from llm_gateway.utils.log_pruner import LogPruner
 from llm_gateway.utils.token_manager import TokenManager
-from llm_gateway.utils.prompt_builder import PromptBuilder
 
 logger = logging.getLogger(__name__)
 
 class SecurityAnalyzerService:
-    """Service that coordinates LLM analysis using a cost-effective two-tier strategy."""
 
-    def __init__(self):
-        self.fast_provider = "huggingface_local" # If you want, you can use "ollama"
-        
-        self.smart_provider = getattr(settings, 'DEFAULT_LLM_PROVIDER', 'openai')
-
-    def analyze(self, raw_logs: list) -> dict:
-        """
-        Exécute l'analyse à deux niveaux pour économiser les tokens.
-        """
-        optimized_logs = LogPruner.compress_logs(raw_logs)
-        safe_logs = TokenManager.truncate_logs(optimized_logs, max_tokens=2500)
-
-        triage_prompt = f"Are there any signs of cyber attacks in these logs? Answer ONLY 'YES' or 'NO'.\n\n{safe_logs}"
-        
+    def _get_llm_config(self, connector_id: str):
+        """Fetches the connector configuration from the database."""
         try:
-            logger.info("Executing Level 1 Triage (Local Model)...")
-            triage_result = llm_router.generate_text(
-                triage_prompt, 
-                provider_name=self.fast_provider,
-                max_tokens=10
-            ).strip().upper()
+            override = ConnectorOverride.objects.get(connector_id=connector_id)
+            return override.overrides or {}
+        except ConnectorOverride.DoesNotExist:
+            return None
+
+    def _call_local_fallback(self, prompt: str) -> str:
+        """Fallback mechanism using a local FLAN-T5 model."""
+        logger.warning("Falling back to the local FLAN-T5 model...")
+        from transformers import pipeline
+        summarizer = pipeline("text-generation", model="google/flan-t5-base")
+        response = summarizer(prompt, max_new_tokens=250, do_sample=False)
+        return response[0]['generated_text']
+
+    def analyze(self, raw_logs: list, active_connector_id: str) -> dict:
+        """Main method called by the views or the router."""
+        
+        safe_logs_string = LogPruner.compress_logs(raw_logs)
+
+        safe_logs_string = TokenManager.truncate_logs(safe_logs_string, max_tokens=4000)
+        
+        prompt = PromptBuilder.build_security_analysis_prompt(safe_logs_string)
+
+        try:
+            response_text = self._call_remote_llm(prompt, connector_id=active_connector_id)
+            return {"status": "success", "analysis": response_text, "source": active_connector_id}
             
-            if "YES" not in triage_result:
-                return {
-                    "threat_detected": False,
-                    "severity": "none",
-                    "summary": "No threats detected during local triage.",
-                    "routed_to_advanced_llm": False
-                }
-                
         except Exception as e:
-            logger.warning(f"Level 1 Triage failed ({str(e)}), escalating to Level 2 directly.")
+            logger.error(f"Connector {active_connector_id} failed: {e}. Triggering fallback.")
+            try:
+                fallback_text = self._call_local_fallback(prompt)
+                return {"status": "degraded", "analysis": fallback_text, "source": "local_fallback"}
+            except Exception as fallback_error:
+                return {"status": "error", "message": "All analysis models are currently unavailable."}
 
-        logger.info("Threat suspected! Escalating to Level 2 Analysis...")
-        investigation_prompt = PromptBuilder.build_security_analysis_prompt(safe_logs)
+    def _call_remote_llm(self, prompt: str, connector_id: str) -> str:
+        """Universal call via LiteLLM with custom exception handling."""
+        config = self._get_llm_config(connector_id)
         
-        raw_response = llm_router.generate_text(
-            investigation_prompt, 
-            provider_name=self.smart_provider
-        )
+        if not config:
+            raise LLMGatewayError(f"Connector '{connector_id}' is not configured.")
+
+        model = config.get('MODEL_NAME')
+        api_key = config.get('API_KEY')
+        base_url = config.get('BASE_URL')
+
+        if not model:
+            raise LLMGatewayError(f"MODEL_NAME is missing for {connector_id}.")
+
+        kwargs = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "timeout": 15
+        }
+        
+        if api_key:
+            kwargs["api_key"] = api_key
+        if base_url:
+            kwargs["api_base"] = base_url
 
         try:
-            result = json.loads(raw_response)
-            result["routed_to_advanced_llm"] = True
-            return result
-        except json.JSONDecodeError:
-            logger.error(f"Failed to parse LLM response as JSON: {raw_response}")
-            return {
-                "error": "Advanced LLM did not return valid JSON.",
-                "raw_response": raw_response
-            }
+            response = litellm.completion(**kwargs)
+            return response.choices[0].message.content
+            
+        except litellm.AuthenticationError as e:
+            raise LLMAuthenticationError(f"Authentication error ({connector_id}): {str(e)}")
+            
+        except litellm.APIConnectionError as e:
+            raise LLMConnectionError(f"Failed to reach API ({connector_id}): {str(e)}")
+            
+        except litellm.RateLimitError as e:
+            raise LLMQuotaExceededError(f"Quota or rate limit exceeded ({connector_id}): {str(e)}")
+            
+        except Exception as e:
+            raise LLMGatewayError(f"Unexpected error with {connector_id}: {str(e)}")
