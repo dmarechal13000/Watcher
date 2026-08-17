@@ -2,7 +2,6 @@ import logging
 import litellm
 from django.conf import settings
 from .exceptions import LLMConnectionError, LLMAuthenticationError, LLMQuotaExceededError, LLMGatewayError
-
 logger = logging.getLogger(__name__)
 
 class LLMRouter:
@@ -79,12 +78,6 @@ class LLMRouter:
         if base_url:
             call_kwargs["api_base"] = base_url
 
-        if connector_id == 'company_enabler':
-            litellm.ssl_verify = False
-            call_kwargs["ssl_verify"] = False
-            if api_key:
-                call_kwargs["extra_headers"] = {"apikey": api_key}
-
         try:
             response = litellm.completion(**call_kwargs)
             return response.choices[0].message.content
@@ -114,7 +107,21 @@ class LLMRouter:
 
     def generate_text(self, prompt: str, provider_name: str = None, **kwargs) -> str:
         """Generates text, automatically switching to fallback if the main provider fails."""
-        connector_id = provider_name or getattr(settings, 'DEFAULT_LLM_PROVIDER', 'company_enabler')
+
+        if not provider_name:
+            try:
+                from connectors.models import ConnectorOverride
+                default_override = ConnectorOverride.objects.filter(is_default_llm=True).first()
+                
+                if default_override:
+                    connector_id = default_override.connector_id
+                else:
+                    connector_id = getattr(settings, 'DEFAULT_LLM_PROVIDER', 'None')
+            except Exception as e:
+                logger.warning(f"Failed to fetch default LLM from DB: {str(e)}")
+                connector_id = getattr(settings, 'DEFAULT_LLM_PROVIDER', 'None')
+        else:
+            connector_id = provider_name
         
         try:
             return self._call_litellm(prompt, connector_id, **kwargs)

@@ -166,7 +166,7 @@ class CoreAPITest(TestCase):
     def test_underscore_prefixed_packages_are_excluded_from_discovery(self):
         """contrib/_template must never be auto-registered as a real connector."""
         self.assertFalse(connector_exists('my_service'))
-        self.assertEqual(get_connector_count(), 14)
+        self.assertEqual(get_connector_count(), 19)
 
     def test_get_connector_by_id_returns_correct_connector(self):
         connector = get_connector_by_id('smtp')
@@ -624,3 +624,54 @@ class WeeklyHealthCheckJobTest(TestCase):
         actions = PendingAction.objects.filter(action_type='connector_health_check')
         self.assertEqual(actions.count(), 2)
 
+class DefaultLLMConfigurationTest(TestCase):
+    """Tests for default LLM selection exclusivity and API endpoint."""
+
+    def setUp(self):
+        import connectors.core as core_mod
+        core_mod._REGISTRY = {}
+        core_mod._connectors_seeded = False
+
+    def test_default_llm_exclusivity(self):
+        """Setting a connector as default LLM must automatically unset others."""
+        c1 = ConnectorOverride.objects.create(connector_id='openai', is_default_llm=True)
+        c2 = ConnectorOverride.objects.create(connector_id='anthropic', is_default_llm=False)
+        
+        c2.is_default_llm = True
+        c2.save()
+        
+        c1.refresh_from_db()
+        self.assertFalse(c1.is_default_llm)
+        self.assertTrue(c2.is_default_llm)
+
+
+class DefaultLLMAPITest(APITestCase):
+    """Tests for the set-default-llm REST API endpoint."""
+
+    def setUp(self):
+        import connectors.core as core_mod
+        core_mod._REGISTRY = {}
+        core_mod._connectors_seeded = False
+
+        self.superuser = User.objects.create_superuser('admin_llm', 'admin_llm@test.com', 'password')
+        self.regular_user = User.objects.create_user('user_llm', 'user_llm@test.com', 'password')
+        _, self.super_token = AuthToken.objects.create(self.superuser)
+        _, self.user_token = AuthToken.objects.create(self.regular_user)
+
+    def _auth(self, token):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {token}')
+
+    def test_set_default_llm_requires_superuser(self):
+        """Regular users cannot change the default LLM."""
+        self._auth(self.user_token)
+        resp = self.client.post('/api/connectors/openai/set-default-llm/', {'is_default_llm': True}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_set_default_llm_works_for_superuser(self):
+        """Superusers can set a connector as the default LLM successfully."""
+        self._auth(self.super_token)
+        resp = self.client.post('/api/connectors/openai/set-default-llm/', {'is_default_llm': True}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        
+        obj = ConnectorOverride.objects.get(connector_id='openai')
+        self.assertTrue(obj.is_default_llm)

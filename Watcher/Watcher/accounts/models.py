@@ -35,6 +35,7 @@ class UserProfile(models.Model):
     theme = models.CharField(max_length=50, default='bootstrap')
     preferences = models.JSONField(default=dict, blank=True)
     avatar_color = models.CharField(max_length=20, blank=True, null=True)
+    preferred_llm = models.CharField(max_length=100, blank=True, null=True, help_text="User's preferred LLM connector ID. If empty, the system default is used.")
     # preferences structure:
     # {
     #   "items_per_page": {"threats_watcher": 10, "data_leak": 10, ...},

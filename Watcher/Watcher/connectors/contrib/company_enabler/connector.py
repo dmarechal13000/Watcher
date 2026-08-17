@@ -25,16 +25,12 @@ def health_check(plain):
         return {'success': False, 'message': 'Model name, Base URL and API key are required.'}
 
     try:
-        litellm.ssl_verify = False
         response = litellm.completion(
             model=model,
             messages=[{"role": "user", "content": "ping"}],
-            max_tokens=1,
             timeout=10,
             api_base=base_url,
             api_key=api_key,
-            ssl_verify=False,
-            extra_headers={"apikey": api_key}
         )
         if response:
             return {'success': True, 'message': f"Successfully connected to Company Enabler model '{model}'!"}

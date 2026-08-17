@@ -28,7 +28,6 @@ def health_check(plain):
         kwargs = {
             "model": model,
             "messages": [{"role": "user", "content": "ping"}],
-            "max_tokens": 1,
             "timeout": 10,
             "api_key": api_key,
         }
