@@ -175,12 +175,11 @@ const WordSummary = ({ word, getWordSummary, generateWordSummary, typewriterEnab
         const config = errorConfig[errorType] || errorConfig['unknown'];
 
         return (
-            <div style={{ padding: "2.4em 0", textAlign: "center", color: "#fff" }}>
-                <div style={{ fontWeight: 600, fontSize: "1.08em", marginBottom: "0.8em" }}>{config.title}</div>
-                <div className="text-muted mb-1">{config.message}</div>
-                {config.detail && (
-                    <div className="text-muted small">{config.detail}</div>
-                )}
+            <div className="wt-summary-state">
+                <i className="material-icons" aria-hidden="true">info</i>
+                <div className="wt-summary-state-title">{config.title}</div>
+                <div>{config.message}</div>
+                {config.detail && <small>{config.detail}</small>}
             </div>
         );
     }
@@ -201,174 +200,71 @@ const WordSummary = ({ word, getWordSummary, generateWordSummary, typewriterEnab
     const buttonShouldBeDisabled = isRegenerating || loading || !!error || isRegenerateDisabled;
 
     return (
-        <div style={{ 
-            height: '100%', 
-            display: 'flex', 
-            flexDirection: 'column',
-            padding: '20px'
-        }}>
-            <div
-                className="word-summary card border-0 shadow-lg bg-transparent"
-                style={{
-                    borderRadius: "1em",
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden'
-                }}
-            >
-                {/* Header */}
-                <div
-                    className="d-flex align-items-center justify-content-between px-4 py-3 bg-primary"
-                    style={{
-                        borderRadius: "1em 1em 0 0",
-                        borderBottom: "none",
-                        fontWeight: "bold",
-                        color: "#fff",
-                        flexShrink: 0
-                    }}
-                >
-                    <span style={{
-                        fontWeight: "bold",
-                        fontSize: "1.15em",
-                        letterSpacing: ".01em"
-                    }}>
-                        Word Summary for {word}
+        <div className="wt-summary-wrap">
+            <div className="word-summary card wt-summary">
+                <div className="wt-summary-head">
+                    <span className="wt-icon-chip" aria-hidden="true">
+                        <i className="material-icons">auto_awesome</i>
                     </span>
-                    <button 
-                       className="btn btn-sm text-muted d-flex align-items-center gap-1"
+                    <div className="wt-summary-title">
+                        <span>Word Summary for</span>{' '}
+                        <strong>{word}</strong>
+                    </div>
+                    <span className="wt-summary-badge">AI summary</span>
+                    <button
+                        type="button"
+                        className="btn btn-sm btn-secondary wt-btn-ghost wt-summary-regen"
                         onClick={() => { if (!buttonShouldBeDisabled) handleRegenerate(); }}
-                        style={{ 
-                            padding: "2px 8px", 
-                            fontSize: "0.85em", 
-                            border: "1px solid rgba(255,255,255,0.4)",
-                            cursor: buttonShouldBeDisabled ? "not-allowed" : "pointer",
-                            opacity: buttonShouldBeDisabled ? 0.5 : 1,
-                            transition: "opacity 0.2s"
-                        }}
+                        disabled={buttonShouldBeDisabled}
                         title={regenerateTooltip}
                     >
-                        <i className={`material-icons ${isRegenerating ? 'icon-spin' : ''}`} style={{ fontSize: 16 }}>
+                        <i className={`material-icons ${isRegenerating ? 'wt-spin' : ''}`} aria-hidden="true">
                             {isRegenerating ? 'sync' : 'refresh'}
                         </i>
-                        {isRegenerating ? (
-                            <span className="d-flex align-items-center">
-                                Regenerating
-                                <span className="loading-dots d-inline-flex ms-1">
-                                    <span>.</span><span></span><span>.</span>
-                                </span>
-                            </span>
-                        ) : 'Regenerate'}
+                        {isRegenerating ? 'Regenerating…' : 'Regenerate'}
                     </button>
                 </div>
 
-                {/* Body */}
-                <div
-                    className="px-4 py-4"
-                    style={{
-                        borderRadius: "0 0 1em 1em",
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        minHeight: 0,
-                        overflow: 'auto'
-                    }}
-                >
+                <div className="wt-summary-body">
                     {loading && (
-                        <div className="text-center py-5">
-                            <span className="loading-dots" style={{ fontSize: "2em", color: "#ffc107" }}>
+                        <div className="wt-summary-state">
+                            <span className="loading-dots" aria-hidden="true">
                                 <span>.</span>
                                 <span>.</span>
                                 <span>.</span>
                             </span>
-                            <div className="text-muted mt-3" style={{ fontSize: "1.04em" }}>
-                                Loading summary for <strong>{word}</strong>
-                            </div>
+                            <div>Loading summary for <strong>{word}</strong></div>
                         </div>
                     )}
 
                     {error && renderErrorState()}
 
                     {!loading && !error && summary && (
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                            <div
-                                className="mb-3 p-3 rounded shadow-sm"
-                                style={{
-                                    fontSize: "1.08em",
-                                    position: "relative",
-                                    lineHeight: 1.7,
-                                    flex: 1,
-                                    overflow: 'auto',
-                                    whiteSpace: 'pre-line',
-                                    background: "rgba(128, 128, 128, 0.15)",
-                                    color: "inherit"
-                                }}
-                            >
+                        <>
+                            <div className="wt-summary-text">
                                 <span dangerouslySetInnerHTML={{ __html: displayHTML }} />
-                                {typing && (
-                                    <span
-                                        className="blinking-cursor"
-                                        style={{
-                                            fontWeight: "bold",
-                                            fontSize: "1.14em",
-                                            marginLeft: "2px",
-                                            color: "#ffc107"
-                                        }}
-                                    >|</span>
-                                )}
+                                {typing && <span className="blinking-cursor" aria-hidden="true">|</span>}
                             </div>
-                            <div
-                                style={{
-                                    color: "inherit",
-                                    fontSize: "0.93em",
-                                    marginTop: "8px",
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    flexShrink: 0
-                                }}
-                            >
-                                <span className="text-muted">
+                            <div className="wt-summary-meta">
+                                <span>
+                                    <i className="material-icons" aria-hidden="true">schedule</i>
                                     Generated at {formatDate(summary.created_at)}
                                 </span>
-                                <span className="text-muted">
-                                    {summary.ai_model}
-                                </span>
-                                <span className="text-muted">
+                                {summary.ai_model && (
+                                    <span title="AI model used for this summary">
+                                        <i className="material-icons" aria-hidden="true">smart_toy</i>
+                                        {summary.ai_model}
+                                    </span>
+                                )}
+                                <span>
+                                    <i className="material-icons" aria-hidden="true">update</i>
                                     Updated at {formatDate(summary.updated_at)}
                                 </span>
                             </div>
-                        </div>
+                        </>
                     )}
                 </div>
             </div>
-
-            <style>
-                {`
-                @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
-                @keyframes dotsBlink { 0%, 80%, 100% { opacity: 1; } 40% { opacity: 0; } }
-                @keyframes spin { 100% { transform: rotate(360deg); } }
-                .icon-spin { animation: spin 1s linear infinite; }
-                
-                .blinking-cursor { animation: blink 1s infinite; }
-                
-                .loading-dots span {
-                    animation: dotsBlink 1.2s infinite;
-                    margin-right: 2px;
-                }
-                .loading-dots span:nth-child(2) { animation-delay: .3s; }
-                .loading-dots span:nth-child(3) { animation-delay: .6s; }
-                
-                .word-summary .cve-link {
-                    color: #ffc107;
-                    text-decoration: underline;
-                    font-weight: 500;
-                    transition: color 0.2s;
-                }
-                .word-summary .cve-link:hover {
-                    color: #ff9800;
-                }
-                `}
-            </style>
         </div>
     );
 };

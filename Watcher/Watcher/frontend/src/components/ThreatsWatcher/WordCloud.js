@@ -7,23 +7,53 @@ import PropTypes from "prop-types";
 import {connect} from "react-redux";
 import {getLeads, getMonitoredKeywords} from "../../actions/leads";
 
-const getBootstrapColor = (className) => {
-    const el = document.createElement("span");
-    el.className = `badge ${className}`;
-    el.style.display = "none";
-    document.body.appendChild(el);
-    const color = window.getComputedStyle(el).backgroundColor;
-    document.body.removeChild(el);
-    return color || "#6c757d";
+// Read the active theme's colours from its Bootstrap CSS variables (not from a rendered element,
+// whose styling can differ: badges are soft pills in watcher-modern.css). Re-read on every render
+// so a theme switch is picked up without reloading the page.
+const themeColor = (name, fallback) => {
+    const value = window.getComputedStyle(document.documentElement).getPropertyValue(`--bs-${name}`).trim();
+    return value || fallback;
+};
+
+const readThemeColors = () => ({
+    success: themeColor('success', '#28a745'),
+    warning: themeColor('warning', '#ffc107'),
+    danger:  themeColor('danger', '#dc3545'),
+    primary: themeColor('primary', '#4e73df'),
+    muted:   themeColor('secondary-color', '#9e9e9e'),
+});
+
+// Reliability buckets (same thresholds as the Word List score badge)
+const scoreBucket = score => {
+    if (score === null || score === undefined || isNaN(score)) return 'none';
+    if (score >= 70) return 'high';
+    if (score >= 40) return 'medium';
+    return 'low';
+};
+
+const LEGEND = [
+    { key: 'high',   label: 'High reliability',   hint: 'score 70% and above', color: 'success' },
+    { key: 'medium', label: 'Medium',             hint: 'score 40 to 69%',     color: 'warning' },
+    { key: 'low',    label: 'Low',                hint: 'score below 40%',     color: 'danger' },
+    { key: 'none',   label: 'Not scored',         hint: 'no reliability score yet', color: 'muted' },
+];
+
+// Font sizes follow the area actually available, so big words never overflow a small panel
+const fontSizesFor = ({ width, height }, count) => {
+    const side = Math.sqrt(Math.max(width, 1) * Math.max(height, 1));
+    const crowd = Math.min(1, Math.max(0.75, 1.2 - count / 220));
+    const max = Math.round(Math.min(90, Math.max(26, (side / 6.5) * crowd)));
+    const min = Math.round(Math.min(18, Math.max(11, side / 36)));
+    return [min, Math.max(min + 8, max)];
 };
 
 const options = {
     enableTooltip: true,
     deterministic: true,
-    fontFamily: 'arial',
+    fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
     fontSizes: [20, 90],
     fontStyle: 'normal',
-    fontWeight: 'normal',
+    fontWeight: '600',
     padding: 3,
     rotations: 1,
     rotationAngles: [0, 90],
@@ -38,17 +68,36 @@ export class WordCloud extends Component {
         super(props);
         this.state = {
             key: 0,
-            containerHeight: 'auto',
-            colors: {
-                success: "#28a745",
-                warning: "#ffc107",
-                danger: "#dc3545"
-            }
+            canvas: null,
         };
+        this.colors = readThemeColors();
         this.containerRef = React.createRef();
         this.resizeTimeout = null;
         this._selectedEl = null;
+        this._canvasObserver = null;
     }
+
+    // The cloud is laid out for the exact size of its area (panel minus legend) and redrawn
+    // when the panel is resized, instead of a height guessed from the number of words.
+    setCanvasEl = (el) => {
+        if (this._canvasObserver) {
+            this._canvasObserver.disconnect();
+            this._canvasObserver = null;
+        }
+        if (!el || typeof ResizeObserver === 'undefined') return;
+        this._canvasObserver = new ResizeObserver(([entry]) => {
+            const width = Math.floor(entry.contentRect.width);
+            const height = Math.floor(entry.contentRect.height);
+            if (width < 40 || height < 40) return;
+            const prev = this.state.canvas;
+            if (prev && Math.abs(prev.width - width) < 8 && Math.abs(prev.height - height) < 8) return;
+            clearTimeout(this.resizeTimeout);
+            this.resizeTimeout = setTimeout(() => {
+                this.setState(state => ({ canvas: { width, height }, key: state.key + 1 }));
+            }, prev ? 180 : 0);
+        });
+        this._canvasObserver.observe(el);
+    };
 
     static propTypes = {
         leads: PropTypes.array.isRequired,
@@ -63,17 +112,19 @@ export class WordCloud extends Component {
     componentDidMount() {
         this.props.getLeads();
         this.props.getMonitoredKeywords();
-
-        this.setState({
-            colors: {
-                success: getBootstrapColor("bg-success"),
-                warning: getBootstrapColor("bg-warning"),
-                danger: getBootstrapColor("bg-danger")
-            }
-        });
     }
 
-    componentDidUpdate(prevProps) {
+    componentDidUpdate(prevProps, prevState) {
+        // The cloud is rebuilt when its key changes: old SVG nodes are gone, so drop the
+        // selection and re-apply the current one once the new words are laid out.
+        if (prevState.key !== this.state.key) {
+            this._markSelected(null);
+            if (this.props.selectedWord) {
+                const word = this.props.selectedWord;
+                setTimeout(() => this._applyExternalSelection(word), 60);
+            }
+        }
+
         const prevDataLength = prevProps.filteredData ? prevProps.filteredData.length : prevProps.leads.length;
         const currentDataLength = this.props.filteredData ? this.props.filteredData.length : this.props.leads.length;
         
@@ -82,12 +133,7 @@ export class WordCloud extends Component {
                 clearTimeout(this.resizeTimeout);
             }
 
-            const baseHeight = Math.min(Math.max(currentDataLength * 20, 200), 600);
-            
-            this.setState({ 
-                containerHeight: `${baseHeight}px`,
-                key: this.state.key + 1 
-            });
+            this.setState({ key: this.state.key + 1 });
 
             this.resizeTimeout = setTimeout(() => {
                 this.setState(prevState => ({
@@ -108,12 +154,7 @@ export class WordCloud extends Component {
 
             // Clear old selection
             if (this._selectedEl) {
-                select(this._selectedEl)
-                    .attr('stroke', null)
-                    .attr('stroke-width', null)
-                    .attr('paint-order', null)
-                    .attr('stroke-linejoin', null);
-                this._selectedEl = null;
+                this._markSelected(null);
             }
             // Apply from external selection (e.g. WordList click)
             if (newWord) {
@@ -122,23 +163,35 @@ export class WordCloud extends Component {
         }
     }
 
-    _applyExternalSelection = (word) => {
+    // The cloud lays its words out asynchronously: retry for a moment until the word is drawn.
+    _applyExternalSelection = (word, attempt = 0) => {
         if (!this.containerRef.current || !word) return;
         const needle = word.toLowerCase().trim();
         this.containerRef.current.querySelectorAll('text').forEach(el => {
             const text = el.textContent.replace(/\*$/, '').toLowerCase().trim();
             if (text === needle && !this._selectedEl) {
-                select(el)
-                    .attr('stroke', '#4e73df')
-                    .attr('stroke-width', '1.5')
-                    .attr('paint-order', 'stroke')
-                    .attr('stroke-linejoin', 'round');
-                this._selectedEl = el;
+                this._markSelected(el);
             }
         });
+        if (!this._selectedEl && attempt < 25 && this.props.selectedWord === word) {
+            this._selectionRetry = setTimeout(() => this._applyExternalSelection(word, attempt + 1), 200);
+        }
+    };
+
+    _markSelected = (el) => {
+        if (this._selectedEl && this._selectedEl !== el) {
+            select(this._selectedEl).classed('wt-cloud-selected', false);
+        }
+        this._selectedEl = el;
+        if (el) select(el).classed('wt-cloud-selected', true);
+        if (this.containerRef.current) {
+            this.containerRef.current.classList.toggle('wt-cloud-has-selection', !!el);
+        }
     };
 
     componentWillUnmount() {
+        clearTimeout(this._selectionRetry);
+        if (this._canvasObserver) this._canvasObserver.disconnect();
         if (this.resizeTimeout) {
             clearTimeout(this.resizeTimeout);
         }
@@ -164,22 +217,7 @@ export class WordCloud extends Component {
                         const { monitoredKeywords = [] } = this.props;
                         const cleanName = word.text.replace(/\*$/, '');
 
-                        // Clear stroke on previously selected element
-                        if (this._selectedEl && this._selectedEl !== element) {
-                            select(this._selectedEl)
-                                .attr('stroke', null)
-                                .attr('stroke-width', null)
-                                .attr('paint-order', null)
-                                .attr('stroke-linejoin', null);
-                        }
-
-                        // Apply stroke halo on newly selected element
-                        text
-                            .attr('stroke', '#4e73df')
-                            .attr('stroke-width', '1.5')
-                            .attr('paint-order', 'stroke')
-                            .attr('stroke-linejoin', 'round');
-                        this._selectedEl = element;
+                        this._markSelected(element);
 
                         // Trigger postUrls update - fall back to monitored keyword posturls if the lead has none
                         const lead = dataToUse.find(l => l.name === cleanName);
@@ -192,9 +230,36 @@ export class WordCloud extends Component {
                     }
                 })
                 .transition()
-                .attr('font-weight', isActive ? 'bold' : 'normal');
+                .attr('font-weight', isActive ? '750' : options.fontWeight);
         };
     };
+
+    leadScore = lead => (lead && lead.score !== undefined && lead.score !== null ? Number(lead.score) : null);
+
+    renderLegend(words, hasMonitored) {
+        const dataToUse = this.props.filteredData || this.props.leads;
+        const byName = new Map(dataToUse.map(l => [l.name, l]));
+        const counts = { high: 0, medium: 0, low: 0, none: 0 };
+        words.forEach(w => { counts[scoreBucket(this.leadScore(byName.get(w.text.replace(/\*$/, ''))))]++; });
+
+        return (
+            <div className="wt-cloud-legend" aria-label="Word colour legend">
+                {LEGEND.filter(item => item.key !== 'none' || counts.none > 0).map(item => (
+                    <span key={item.key} className="wt-cloud-legend-item" title={`${item.label}: ${item.hint}`}>
+                        <span className="wt-cloud-swatch" style={{ background: this.colors[item.color] }} />
+                        {item.label}
+                        <span className="wt-cloud-count">{counts[item.key]}</span>
+                    </span>
+                ))}
+                {hasMonitored && (
+                    <span className="wt-cloud-legend-item" title="Words ending with * are monitored keywords">
+                        <span className="wt-cloud-star">*</span>
+                        Monitored keyword
+                    </span>
+                )}
+            </div>
+        );
+    }
 
     callbacks = {
         getWordTooltip: word => {
@@ -209,18 +274,13 @@ export class WordCloud extends Component {
         onWordMouseOver: this.getCallback('onWordMouseOver'),
         getWordColor: word => {
             const dataToUse = this.props.filteredData || this.props.leads;
-            const lead = dataToUse.find(l => l.name === word.text);
-            const score = lead && (typeof lead.score !== 'undefined') ? Number(lead.score) : null;
-            if (score === null || isNaN(score)) {
-                return '#9e9e9e';
-            }
-            if (score >= 70) return this.state.colors.success;
-            if (score >= 40) return this.state.colors.warning;
-            return this.state.colors.danger;
+            const lead = dataToUse.find(l => l.name === word.text.replace(/\*$/, ''));
+            return this.colors[LEGEND.find(l => l.key === scoreBucket(this.leadScore(lead))).color];
         }
     };
 
     render() {
+        this.colors = readThemeColors();
         const dataToUse = this.props.filteredData || this.props.leads;
         const { monitoredKeywords = [] } = this.props;
         const { fromSourceFilter } = this.props;
@@ -263,20 +323,21 @@ export class WordCloud extends Component {
             <Fragment>
                 <div 
                     ref={this.containerRef} 
-                    style={{ 
-                        width: '100%', 
-                        height: this.state.containerHeight,
-                        minHeight: '200px',
-                        maxHeight: '600px',
-                        overflow: 'hidden'
-                    }}
+                    className="wt-cloud"
+                    style={{ width: '100%', height: '100%', minHeight: '200px', overflow: 'hidden' }}
                 >
-                    <ReactWordcloud 
-                        key={this.state.key} 
-                        options={options} 
-                        callbacks={this.callbacks} 
-                        words={words}
-                    />
+                    <div className="wt-cloud-canvas" ref={this.setCanvasEl}>
+                        {this.state.canvas && (
+                            <ReactWordcloud
+                                key={this.state.key}
+                                options={{ ...options, fontSizes: fontSizesFor(this.state.canvas, words.length) }}
+                                callbacks={this.callbacks}
+                                words={words}
+                                size={[this.state.canvas.width, this.state.canvas.height]}
+                            />
+                        )}
+                    </div>
+                    {this.renderLegend(words, words.some(w => w.text.endsWith('*')))}
                 </div>
             </Fragment>
         )

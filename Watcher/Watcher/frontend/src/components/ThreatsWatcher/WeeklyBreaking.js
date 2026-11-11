@@ -37,11 +37,53 @@ const LS_TAB_KEY = "watcher_weekly_active_tab";
 const LS_WEEKLY_READ_KEY = "watcher_weekly_read_id";
 const LS_BREAKING_READ_KEY = "watcher_breaking_read_id";
 const CARD_MIN_HEIGHT = 72;
-const CARD_WIDTH = 680;
+const CARD_WIDTH = 560;
 const CARD_MINIMIZED_WIDTH = 470;
-const BUBBLE_SIZE = 68;
+const BUBBLE_SIZE = 56;
 const MARGIN = 32;
 const DRAG_THRESHOLD = 5;
+
+// Interface zoom applied on <body>. Pointer events, window sizes and bounding rects are in real
+// viewport px, while left/bottom/offsetWidth are in zoomed CSS px: convert with this factor.
+const bodyZoom = () => parseFloat(getComputedStyle(document.body).zoom) || 1;
+const EDGE_GAP = 16;
+
+// Area the widget may occupy: right of the sidebar (when it is docked, not the mobile drawer)
+// and below the top bar, so it never covers the app navigation.
+const getSafeArea = () => {
+    let left = 0;
+    let top = 0;
+    const sidebar = document.querySelector('.wt-sidebar');
+    if (sidebar) {
+        const rect = sidebar.getBoundingClientRect();
+        if (rect.right > 0 && getComputedStyle(sidebar).position !== 'fixed') left = rect.right;
+    }
+    const topbar = document.querySelector('.wt-topbar');
+    if (topbar) top = Math.max(0, topbar.getBoundingClientRect().bottom);
+    return { left, top };
+};
+
+// Footer of a brief: generation date, AI model and a "Regenerate" action with its cooldown.
+const BriefMeta = ({ date, model, regenerating, cooldown, onRegenerate }) => {
+    const blocked = regenerating || cooldown.disabled;
+    return (
+        <div className="wt-brief-meta">
+            <span className="material-icons">schedule</span>
+            Generated at {formatDate(date)}
+            {model && <span className="wt-brief-model" title="AI model used for this summary">{model}</span>}
+            <button
+                type="button"
+                className="wt-brief-regen"
+                disabled={blocked}
+                title={cooldown.tooltip}
+                onClick={() => { if (!blocked) onRegenerate(); }}
+            >
+                <span className={`material-icons ${regenerating ? "wt-spin" : ""}`}>{regenerating ? "sync" : "refresh"}</span>
+                {regenerating ? "Regenerating…" : "Regenerate"}
+            </button>
+        </div>
+    );
+};
 
 const WeeklyBreaking = ({ getWeeklySummary, getBreakingNews, typewriterEnabled, createMessage, getSummaryConfig, regenerateWeeklySummary, regenerateBreakingNews }) => {
     const [weeklyText, setWeeklyText] = useState("");
@@ -57,8 +99,8 @@ const WeeklyBreaking = ({ getWeeklySummary, getBreakingNews, typewriterEnabled, 
         const x = parseInt(localStorage.getItem(LS_X_KEY), 10);
         const bottom = parseInt(localStorage.getItem(LS_Y_KEY), 10);
         return {
-            x: isNaN(x) ? MARGIN : x,
-            bottom: isNaN(bottom) ? MARGIN : bottom,
+            x: isNaN(x) ? 0 : x,
+            bottom: isNaN(bottom) ? EDGE_GAP : bottom,
         };
     });
     const [dragging, setDragging] = useState(false);
@@ -330,20 +372,20 @@ const WeeklyBreaking = ({ getWeeklySummary, getBreakingNews, typewriterEnabled, 
         };
     }, [minimized, activeTab, weeklyDisplayHTML]);
 
+    // x / bottom are CSS px (zoomed space); the bounds are computed in viewport px
     const clampToViewport = useCallback((x, bottom, minimizedVal = minimized) => {
-        const cardWidth = minimizedVal ? BUBBLE_SIZE : CARD_WIDTH;
-        const cardHeight = minimizedVal ? BUBBLE_SIZE : (windowRef.current ? windowRef.current.offsetHeight : CARD_MIN_HEIGHT);
-        const maxX = window.innerWidth - cardWidth - MARGIN;
-        const minX = MARGIN;
-        let newX = Math.max(minX, Math.min(x, maxX));
-        const maxBottom = window.innerHeight - cardHeight - MARGIN;
-        let newBottom = Math.max(MARGIN, Math.min(bottom, maxBottom));
-        let top = window.innerHeight - newBottom - cardHeight;
-        if (top < MARGIN) {
-            newBottom = window.innerHeight - cardHeight - MARGIN;
-            if (newBottom < MARGIN) newBottom = MARGIN;
-        }
-        return { x: newX, bottom: newBottom };
+        const z = bodyZoom();
+        const el = windowRef.current;
+        const cardWidth = (minimizedVal ? BUBBLE_SIZE : (el ? el.offsetWidth : CARD_WIDTH)) * z;
+        const cardHeight = (minimizedVal ? BUBBLE_SIZE : (el ? el.offsetHeight : CARD_MIN_HEIGHT)) * z;
+        const { left, top } = getSafeArea();
+        const minX = left + EDGE_GAP;
+        const maxX = Math.max(minX, window.innerWidth - cardWidth - EDGE_GAP);
+        const newX = Math.max(minX, Math.min(x * z, maxX));
+        // "bottom" is measured from the viewport bottom; keep the card below the top bar
+        const maxBottom = Math.max(EDGE_GAP, window.innerHeight - cardHeight - (top + EDGE_GAP));
+        const newBottom = Math.max(EDGE_GAP, Math.min(bottom * z, maxBottom));
+        return { x: newX / z, bottom: newBottom / z };
     }, [minimized]);
 
     useEffect(() => {
@@ -422,13 +464,15 @@ const WeeklyBreaking = ({ getWeeklySummary, getBreakingNews, typewriterEnabled, 
                 setHasDragged(true);
             }
             
-            const cardWidth = minimized ? BUBBLE_SIZE : CARD_WIDTH;
-            const cardHeight = minimized ? BUBBLE_SIZE : (windowRef.current ? windowRef.current.offsetHeight : CARD_MIN_HEIGHT);
+            // Pointer maths in viewport px, then back to CSS px for left / bottom
+            const z = bodyZoom();
+            const cardWidth = (minimized ? BUBBLE_SIZE : CARD_WIDTH) * z;
+            const cardHeight = (minimized ? BUBBLE_SIZE : (windowRef.current ? windowRef.current.offsetHeight : CARD_MIN_HEIGHT)) * z;
             const maxX = window.innerWidth - cardWidth - MARGIN;
             let newX = Math.max(MARGIN, Math.min(e.clientX - dragOffset.current.x, maxX));
             let pointerY = e.clientY - dragOffset.current.y;
             let newBottom = window.innerHeight - (pointerY + cardHeight);
-            const clamped = clampToViewport(newX, newBottom, minimized);
+            const clamped = clampToViewport(newX / z, newBottom / z, minimized);
             setPos(clamped);
         }
         
@@ -479,30 +523,10 @@ const WeeklyBreaking = ({ getWeeklySummary, getBreakingNews, typewriterEnabled, 
 
     const tabs = [];
     if (hasWeekly) {
-        tabs.push({
-            key: "weekly",
-            bootstrapClass: "btn-primary",
-            icon: "description",
-            label: (
-                <span style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span className="material-icons" style={{ fontSize: 18, marginRight: 7, verticalAlign: "middle" }}>description</span>
-                    Weekly Report
-                </span>
-            )
-        });
+        tabs.push({ key: "weekly", tone: "primary", icon: "description", label: "Weekly Report", unread: hasUnreadWeekly });
     }
     if (hasBreaking) {
-        tabs.push({
-            key: "breaking",
-            bootstrapClass: "btn-danger",
-            icon: "bolt",
-            label: (
-                <span style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span className="material-icons" style={{ fontSize: 18, marginRight: 7, verticalAlign: "middle" }}>bolt</span>
-                    Breaking News
-                </span>
-            )
-        });
+        tabs.push({ key: "breaking", tone: "danger", icon: "bolt", label: "Breaking News", unread: hasUnreadBreaking });
     }
 
     if (!hasWeekly && !hasBreaking) {
@@ -510,35 +534,20 @@ const WeeklyBreaking = ({ getWeeklySummary, getBreakingNews, typewriterEnabled, 
     }
 
     const hasAnyUnread = hasUnreadWeekly || hasUnreadBreaking;
-
-    function tabNavStyle(tab) {
-        const isActive = tab.key === activeTab;
-        return {
-            color: "#fff",
-            border: "none",
-            fontWeight: "bold",
-            cursor: "pointer",
-            fontSize: isActive ? "0.95em" : "0.9em",
-            transition: "background 0.22s, color 0.18s, border-bottom 0.22s, box-shadow 0.16s, transform 0.2s",
-            borderBottom: isActive ? "4px solid currentColor" : "2px solid #23272b",
-            boxShadow: isActive ? "0 2px 18px 0 rgba(0,0,0,0.3)" : "none",
-            padding: isActive ? "0.7em 0 0.6em" : "0.4em 0 0.4em",
-            width: tabs.length === 1 ? "100%" : (isActive ? "54%" : "46%"),
-            borderRadius: tabs.length === 1
-                ? "1em 1em 0 0"
-                : (tab.key === "weekly" ? "1em 0 0 0" : "0 1em 0 0"),
-            outline: "none",
-            zIndex: isActive ? 1 : 0,
-            transform: isActive ? "scale(1.02)" : "scale(1)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-        };
-    }
-
-    const cardMaxHeight = `calc(100vh - ${2 * MARGIN}px)`;
+    const currentTab = tabs.find(t => t.key === activeTab) || tabs[0];
+    const cardMaxHeight = `calc(var(--wt-vh, 100vh) - ${2 * MARGIN}px)`;
 
     const handleMouseDown = (e) => {
+        // Let clicks on the tabs and buttons through; drag from the rest of the header
+        if (e.target.closest("button")) return;
+        setDragging(true);
+        setHasDragged(false);
+        const rect = windowRef.current.getBoundingClientRect();
+        dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        dragStartPos.current = { x: e.clientX, y: e.clientY };
+    };
+
+    const handleBubbleMouseDown = (e) => {
         setDragging(true);
         setHasDragged(false);
         const rect = windowRef.current.getBoundingClientRect();
@@ -554,37 +563,24 @@ const WeeklyBreaking = ({ getWeeklySummary, getBreakingNews, typewriterEnabled, 
 
     // Bubble mini mode
     if (minimized) {
-        const tabToShow = tabs.find(t => t.key === activeTab) || tabs[0];
         return (
             <div
                 ref={windowRef}
-                className="position-fixed"
-                style={{
-                    left: pos.x,
-                    bottom: pos.bottom,
-                    zIndex: 1050,
-                }}
+                className="position-fixed wt-brief-bubble"
+                style={{ left: pos.x, bottom: pos.bottom, zIndex: 1050 }}
             >
                 <div
-                    className={`btn ${tabToShow.bootstrapClass} rounded-circle shadow-lg d-flex align-items-center justify-content-center`}
-                    style={{
-                        width: BUBBLE_SIZE,
-                        height: BUBBLE_SIZE,
-                        boxShadow: "0 4px 24px 0 rgba(0,0,0,0.4)",
-                        cursor: "pointer",
-                        border: hasAnyUnread ? "3px solid #ffc107" : "3px solid #fff",
-                        transition: "box-shadow 0.16s, border 0.3s",
-                        userSelect: "none",
-                        position: "relative",
-                        padding: 0
-                    }}
+                    className={`wt-brief-bubble-btn wt-brief-${currentTab.tone}`}
+                    style={{ width: BUBBLE_SIZE, height: BUBBLE_SIZE }}
                     title="Show Threat Intelligence Summary"
+                    role="button"
+                    tabIndex={0}
                     onClick={handleBubbleClick}
-                    onMouseDown={handleMouseDown}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setMinimized(false); }}
+                    onMouseDown={handleBubbleMouseDown}
                 >
-                    <span className="material-icons" style={{ color: "#fff", fontSize: 34 }}>
-                        {tabToShow ? tabToShow.icon : "info"}
-                    </span>
+                    <span className="material-icons">{currentTab.icon}</span>
+                    {hasAnyUnread && <span className="wt-brief-dot" aria-label="Unread" />}
                 </div>
             </div>
         );
@@ -594,194 +590,84 @@ const WeeklyBreaking = ({ getWeeklySummary, getBreakingNews, typewriterEnabled, 
     return (
         <div
             ref={windowRef}
-            className="position-fixed"
+            className="position-fixed wt-brief"
             style={{
                 left: pos.x,
                 bottom: pos.bottom,
                 zIndex: 1050,
-                width: "95vw",
-                maxWidth: minimized ? `${BUBBLE_SIZE}px` : `${CARD_WIDTH}px`,
-                minWidth: "220px",
-                borderRadius: "1em",
+                width: "calc(100vw - 32px)",
+                maxWidth: `${CARD_WIDTH}px`,
                 transition: dragging ? "none" : "bottom 0.1s,left 0.1s,width 0.18s"
             }}
         >
-            <style>
-                {`
-                @keyframes blink { 0%{opacity:1;} 50%{opacity:0;} 100%{opacity:1;} }
-                .blinking-cursor { animation: blink 1s infinite; }
-
-                @keyframes spin { 100% { transform: rotate(360deg); } }
-                .icon-spin { animation: spin 1s linear infinite; }
-                @keyframes dotsBlink { 0%, 80%, 100% { opacity: 1; } 40% { opacity: 0; } }
-                .loading-dots span {
-                    animation: dotsBlink 1.2s infinite;
-                    margin-right: 2px;
-                }
-                .loading-dots span:nth-child(2) { animation-delay: .3s; }
-                .loading-dots span:nth-child(3) { animation-delay: .6s; }
-                
-                details.watcher-cluster > summary::-webkit-details-marker { display: none; }
-                details.watcher-cluster > summary { list-style: none; }
-                
-                details.watcher-cluster[open] > summary .cluster-arrow { transform: rotate(0deg); }
-                details.watcher-cluster:not([open]) > summary .cluster-arrow { transform: rotate(-90deg); }
-                `}
-            </style>
-            <div className="card shadow-lg mb-0 border-0 bg-secondary"
-                style={{
-                    borderRadius: "1em",
-                    overflow: "hidden",
-                    maxHeight: cardMaxHeight,
-                    background: "#23272b",
-                    boxShadow: "0 6px 32px 4px rgba(0,0,0,0.5)",
-                    border: hasAnyUnread ? "3px solid #ffc107" : "none"
-                }}
-            >
-                <div
-                    style={{
-                        background: "#23272b",
-                        borderRadius: "1em 1em 0 0",
-                        minHeight: 40,
-                        position: "relative",
-                        userSelect: "none",
-                        display: "flex",
-                        alignItems: "stretch",
-                        padding: 0,
-                        borderBottom: "none"
-                    }}
-                    onMouseDown={handleMouseDown}
-                >
-                    {tabs.map(tab => (
-                        <button
-                            key={tab.key}
-                            className={`btn ${tab.bootstrapClass}`}
-                            style={tabNavStyle(tab)}
-                            onClick={() => setActiveTab(tab.key)}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
-                    
-                    <span style={{
-                        position: "absolute",
-                        right: 14,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        zIndex: 20,
-                        display: "flex",
-                        alignItems: "center"
-                    }}>
-                        <span
-                            className="material-icons"
-                            style={{ cursor: "pointer", fontSize: "2em", color: "#fff" }}
-                            title="Minimize"
-                            onClick={() => setMinimized(true)}
-                        >expand_more</span>
-                    </span>
+            <div className={`wt-brief-card wt-brief-${currentTab.tone}`} style={{ maxHeight: cardMaxHeight }}>
+                <div className="wt-brief-head" onMouseDown={handleMouseDown}>
+                    <div className="wt-brief-tabs" role="tablist">
+                        {tabs.map(tab => (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                role="tab"
+                                aria-selected={tab.key === currentTab.key}
+                                className={`wt-brief-tab wt-brief-${tab.tone} ${tab.key === currentTab.key ? "is-active" : ""}`}
+                                onClick={() => setActiveTab(tab.key)}
+                            >
+                                <span className="material-icons">{tab.icon}</span>
+                                {tab.label}
+                                {tab.unread && <span className="wt-brief-new">New</span>}
+                            </button>
+                        ))}
+                    </div>
+                    <button
+                        type="button"
+                        className="wt-brief-icon-btn"
+                        title="Minimize"
+                        aria-label="Minimize"
+                        onClick={() => setMinimized(true)}
+                    >
+                        <span className="material-icons">expand_more</span>
+                    </button>
                 </div>
 
-                {!minimized && (
-                    <div 
-                        ref={contentRef}
-                        className="tab-content bg-secondary" 
-                        style={{ 
-                            borderRadius: "0 0 1em 1em",
-                            maxHeight: `calc(${cardMaxHeight} - 54px)`,
-                            overflowY: "auto",
-                            overflowX: "hidden"
-                        }}
-                    >
-                        {activeTab === "weekly" && weeklyText && (
-                            <div className="card-body">
-                                <div style={{ fontSize: "1.08em", color: "inherit"}}>
-                                    <span dangerouslySetInnerHTML={{ __html: weeklyDisplayHTML }} />
-                                    {typewriterEnabled && weeklyDisplayHTML !== convertCVELinksToHTML(weeklyText) && (
-                                        <span className="blinking-cursor">|</span>
-                                    )}
-                                </div>
-                               <div
-                                    className="mt-3 pt-2 d-flex justify-content-between align-items-center"
-                                    style={{
-                                        fontSize: "0.85em",
-                                        color: "inherit",
-                                        borderTop: "1px solid var(--bs-border-color)",
-                                    }}
-                                >
-                                    <span className="text-muted">Generated at {formatDate(weeklyCreatedAt)}</span>
-                                    <span className="text-muted">{weeklyAiModel}</span>
-                                    <button 
-                                        className="btn btn-sm text-muted d-flex align-items-center gap-1"
-                                        onClick={() => { if (!(isRegeneratingWeekly || weeklyCooldown.disabled)) handleRegenerateWeekly(); }}
-                                        style={{ 
-                                            padding: "2px 8px", 
-                                            fontSize: "0.9em", 
-                                            border: "none",
-                                            cursor: (isRegeneratingWeekly || weeklyCooldown.disabled) ? "not-allowed" : "pointer",
-                                            opacity: (isRegeneratingWeekly || weeklyCooldown.disabled) ? 0.5 : 0.8,
-                                            transition: "opacity 0.2s"
-                                        }}
-                                        title={weeklyCooldown.tooltip}
-                                    >
-                                        <i className={`material-icons ${isRegeneratingWeekly ? 'icon-spin' : ''}`} style={{ fontSize: 14 }}>
-                                            {isRegeneratingWeekly ? 'sync' : 'refresh'}
-                                        </i>
-                                        {isRegeneratingWeekly ? (
-                                            <span className="loading-dots d-inline-flex ms-1">
-                                                Regenerating
-                                                <span>.</span><span>.</span><span>.</span>
-                                            </span>
-                                        ) : 'Regenerate'}
-                                    </button>
-                                </div>
+                <div
+                    ref={contentRef}
+                    className="wt-brief-body"
+                    style={{ maxHeight: `calc(${cardMaxHeight} - 56px)` }}
+                >
+                    {currentTab.key === "weekly" && weeklyText && (
+                        <>
+                            <div className="wt-brief-text">
+                                <span dangerouslySetInnerHTML={{ __html: weeklyDisplayHTML }} />
+                                {typewriterEnabled && weeklyDisplayHTML !== convertCVELinksToHTML(weeklyText) && (
+                                    <span className="wt-brief-caret blinking-cursor">|</span>
+                                )}
                             </div>
-                        )}
+                            <BriefMeta
+                                date={weeklyCreatedAt}
+                                model={weeklyAiModel}
+                                regenerating={isRegeneratingWeekly}
+                                cooldown={weeklyCooldown}
+                                onRegenerate={handleRegenerateWeekly}
+                            />
+                        </>
+                    )}
 
-                        {activeTab === "breaking" && breakingNews && (
-                            <div className="card-body">
-                                <div
-                                    className="card-text"
-                                    style={{ fontSize: "1.08em", color: "inherit" }}
-                                    dangerouslySetInnerHTML={{ __html: breakingNews.summary_text }}
-                                />
-                               <div
-                                    className="mt-3 pt-2 d-flex justify-content-between align-items-center"
-                                    style={{
-                                        fontSize: "0.85em",
-                                        color: "inherit",
-                                        borderTop: "1px solid var(--bs-border-color)",
-                                    }}
-                                >
-                                    <span className="text-muted">Generated at {formatDate(breakingNews.created_at)}</span>
-                                    <span className="text-muted">{breakingNews.ai_model}</span>
-                                    <button 
-                                        className="btn btn-sm text-muted d-flex align-items-center gap-1"
-                                        onClick={() => { if (!(isRegeneratingBreaking || breakingCooldown.disabled)) handleRegenerateBreaking(); }}
-                                        style={{ 
-                                            padding: "2px 8px", 
-                                            fontSize: "0.9em", 
-                                            border: "none",
-                                            cursor: (isRegeneratingBreaking || breakingCooldown.disabled) ? "not-allowed" : "pointer",
-                                            opacity: (isRegeneratingBreaking || breakingCooldown.disabled) ? 0.5 : 0.8,
-                                            transition: "opacity 0.2s"
-                                        }}
-                                        title={breakingCooldown.tooltip}
-                                    >
-                                        <i className={`material-icons ${isRegeneratingBreaking ? 'icon-spin' : ''}`} style={{ fontSize: 14 }}>
-                                            {isRegeneratingBreaking ? 'sync' : 'refresh'}
-                                        </i>
-                                        {isRegeneratingBreaking ? (
-                                            <span className="loading-dots d-inline-flex ms-1">
-                                                Regenerating
-                                                <span>.</span><span>.</span><span>.</span>
-                                            </span>
-                                        ) : 'Regenerate'}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
+                    {currentTab.key === "breaking" && breakingNews && (
+                        <>
+                            <div
+                                className="wt-brief-text"
+                                dangerouslySetInnerHTML={{ __html: breakingNews.summary_text }}
+                            />
+                            <BriefMeta
+                                date={breakingNews.created_at}
+                                model={breakingNews.ai_model}
+                                regenerating={isRegeneratingBreaking}
+                                cooldown={breakingCooldown}
+                                onRegenerate={handleRegenerateBreaking}
+                            />
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );
