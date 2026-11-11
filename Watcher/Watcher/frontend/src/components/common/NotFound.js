@@ -1,54 +1,40 @@
-import React, { Fragment } from 'react';
-import { Link } from 'react-router-dom';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { connect } from 'react-redux';
+import PropTypes from 'prop-types';
+import WatcherMark from './WatcherMark';
+import { openCommandPalette, SHORTCUT_LABEL } from '../layout/CommandPalette';
 
-const NotFound = () => {
+const NotFound = ({ isAuthenticated }) => {
+    const { pathname } = useLocation();
+
     return (
-        <Fragment>
-            <div className="container-fluid mt-5">
-                <div className="row justify-content-center">
-                    <div className="col-md-8 col-lg-6">
-                        <div className="card bg-secondary border-0 shadow-lg" style={{ borderRadius: '1em' }}>
-                            <div className="card-body text-center py-5">
-                                <div className="mb-4">
-                                    <span 
-                                        className="material-icons text-primary" 
-                                        style={{ 
-                                            fontSize: '8em',
-                                            opacity: 0.8
-                                        }}
-                                    >
-                                        error_outline
-                                    </span>
-                                </div>
-                                
-                                <h1 className="display-1 fw-bold text-white mb-3">404</h1>
-                                
-                                <h3 className="text-white mb-4">Page Not Found</h3>
-                                
-                                <p className="text-muted mb-4" style={{ fontSize: '1.1em' }}>
-                                    The page you are looking for doesn't exist or has been moved.
-                                </p>
-                                
-                                <div className="d-flex justify-content-center gap-3 flex-wrap">
-                                    <Link 
-                                        to="/" 
-                                        className="btn btn-primary btn-lg d-flex align-items-center"
-                                        style={{ 
-                                            borderRadius: '0.5em',
-                                            padding: '0.75em 1.5em'
-                                        }}
-                                    >
-                                        <span className="material-icons me-2" style={{ marginRight: '8px' }}>home</span>
-                                        Go to Dashboard
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div className="wt-notfound">
+            <div className="wt-notfound-mark" aria-hidden="true">
+                <WatcherMark />
             </div>
-        </Fragment>
+            <div className="wt-eyebrow">Error 404</div>
+            <h1>Nothing to watch here</h1>
+            <p>
+                The page <code>{pathname}</code> doesn't exist or has been moved.
+            </p>
+            <div className="wt-notfound-actions">
+                <Link to={isAuthenticated ? '/overview' : '/'} replace className="btn btn-primary">
+                    <i className="material-icons" aria-hidden="true">{isAuthenticated ? 'space_dashboard' : 'radar'}</i>
+                    {isAuthenticated ? 'Back to Overview' : 'Back to Threats Watcher'}
+                </Link>
+                <button type="button" className="btn btn-secondary wt-btn-ghost" onClick={openCommandPalette}>
+                    <i className="material-icons" aria-hidden="true">search</i>
+                    Search Watcher
+                    <kbd>{SHORTCUT_LABEL}</kbd>
+                </button>
+            </div>
+        </div>
     );
 };
 
-export default NotFound;
+NotFound.propTypes = { isAuthenticated: PropTypes.bool };
+
+const mapStateToProps = state => ({ isAuthenticated: !!state.auth.isAuthenticated });
+
+export default connect(mapStateToProps)(NotFound);

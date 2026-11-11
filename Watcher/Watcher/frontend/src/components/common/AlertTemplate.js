@@ -1,69 +1,39 @@
 import React from 'react';
 
-const icons = {
-    success: { name: "check_circle", color: "#198754" },
-    error:   { name: "cancel",       color: "#dc3545" },
-    warning: { name: "warning",      color: "#ffc107" },
-    info:    { name: "info",         color: "#0dcaf0" },
-    delete:  { name: "delete",       color: "#6c757d" },
-};
-
-const borders = {
-    success: "#198754",
-    error:   "#dc3545",
-    warning: "#ffc107",
-    info:    "#0dcaf0",
-    delete:  "#6c757d"
+// Toast used by react-alert. Colours come from the active theme (see .wt-toast in watcher-modern.css).
+const TYPES = {
+    success: { icon: 'check_circle', label: 'Success' },
+    error:   { icon: 'error',        label: 'Error' },
+    warning: { icon: 'warning',      label: 'Warning' },
+    info:    { icon: 'info',         label: 'Information' },
+    delete:  { icon: 'delete',       label: 'Deleted' },
 };
 
 const AlertTemplate = ({ style, options, message, close }) => {
-    const type = options.type || "info";
-    const icon = icons[type] || icons.info;
-    const borderColor = borders[type] || borders.info;
+    const type = TYPES[options.type] ? options.type : 'info';
+    const { icon, label } = TYPES[type];
+    const timeout = Number(options.timeout) || 0;
 
     return (
         <div
-            className="d-flex align-items-center bg-secondary"
-            style={{
-                ...style,
-                borderRadius: '8px',
-                borderLeft: `6px solid ${borderColor}`,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                padding: '0.85rem 1.3rem',
-                margin: '0.6rem 0',
-                minWidth: 260,
-                maxWidth: 480,
-                fontSize: '1.04rem',
-                fontWeight: 500,
-            }}
+            className={`wt-toast wt-toast-${type}`}
+            style={style}
+            role={type === 'error' ? 'alert' : 'status'}
+            aria-live={type === 'error' ? 'assertive' : 'polite'}
         >
-            <span className="material-icons" style={{
-                fontSize: 24,
-                marginRight: 14,
-                color: icon.color,
-                verticalAlign: 'middle',
-                opacity: 0.98,
-            }}>
-                {icon.name}
+            <span className="wt-toast-icon" aria-hidden="true">
+                <span className="material-icons">{icon}</span>
             </span>
-            <span style={{flex: 1}}>{message}</span>
-            <button
-                onClick={close}
-                type="button"
-                aria-label="Close"
-                className="btn btn-link p-0 ms-2"
-                style={{
-                    color: "#888",
-                    fontSize: 22,
-                    lineHeight: 1,
-                    textDecoration: "none",
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer"
-                }}
-            >
-                <span className="material-icons" style={{fontSize: 22, verticalAlign: "middle"}}>close</span>
+            <div className="wt-toast-body">
+                <span className="visually-hidden">{label}: </span>
+                {message}
+            </div>
+            <button type="button" className="wt-toast-close" onClick={close} aria-label="Close">
+                <span className="material-icons">close</span>
             </button>
+            {timeout > 0 && (
+                <span className="wt-toast-timer" style={{ animationDuration: `${timeout}ms` }} aria-hidden="true" />
+            )}
         </div>
     );
 };

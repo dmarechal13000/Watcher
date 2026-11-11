@@ -4,13 +4,24 @@ import {
     HashRouter as Router,
     Route,
     Switch,
-    Redirect
+    Redirect,
+    useLocation
 } from "react-router-dom";
 
 import Header from "./layout/Header";
+import Sidebar from "./layout/Sidebar";
+import CommandPalette from "./layout/CommandPalette";
+import ThemeBackdrop from "./common/ThemeBackdrop";
 import Alerts from "./layout/Alerts";
 import {transitions, positions, Provider as AlertProvider} from "react-alert";
 import Dashboard from "./ThreatsWatcher/Dashboard";
+import Overview from "./Overview/Overview";
+import ThreatsWatcherStatisticsPage from "./ThreatsWatcher/StatisticsPage";
+import CyberWatchStatisticsPage from "./CyberWatch/StatisticsPage";
+import DataLeakStatisticsPage from "./DataLeak/StatisticsPage";
+import DnsFinderStatisticsPage from "./DnsFinder/StatisticsPage";
+import SiteMonitoringStatisticsPage from "./SiteMonitoring/StatisticsPage";
+import LegitimateDomainsStatisticsPage from "./LegitimateDomains/StatisticsPage";
 import Login from "./accounts/Login";
 import PasswordChange from "./accounts/PasswordChange";
 import DataLeakDashboard from './DataLeak/Dashboard'
@@ -64,34 +75,42 @@ function ScrollToTopButton() {
     return (
         <button
             onClick={scrollToTop}
-            className="btn btn-primary rounded-circle shadow-lg"
-            style={{
-                display: visible ? "flex" : "none",
-                alignItems: "center",
-                justifyContent: "center",
-                position: "fixed",
-                bottom: 30,
-                right: 30,
-                zIndex: 9999,
-                width: 68,
-                height: 68,
-                border: "3px solid #fff",
-                transition: "opacity 0.3s",
-            }}
+            className="btn btn-primary wt-scroll-top shadow-lg"
+            style={{ display: visible ? "grid" : "none" }}
             aria-label="Scroll to top"
             title="Scroll to top"
         >
-            <svg width="36" height="36" viewBox="0 0 36 36" style={{display: "block"}}>
-                <polyline
-                    points="10,22 18,14 26,22"
-                    fill="none"
-                    stroke="#fff"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                />
-            </svg>
+            <i className="material-icons" style={{ fontSize: 24 }}>keyboard_arrow_up</i>
         </button>
+    );
+}
+
+// Sidebar + top bar around every page except the full-screen login.
+function AppShell({ children }) {
+    const location = useLocation();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    useEffect(() => setSidebarOpen(false), [location.pathname]);
+
+    if (location.pathname === '/login') {
+        return <main className="wt-page-layer">{children}</main>;
+    }
+
+    return (
+        <div className={`wt-shell ${sidebarOpen ? 'wt-sidebar-open' : ''}`}>
+            <Sidebar onNavigate={() => setSidebarOpen(false)} />
+            <div className="wt-sidebar-scrim" onClick={() => setSidebarOpen(false)} />
+            <div className="wt-main">
+                <Header onToggleSidebar={() => setSidebarOpen(o => !o)} />
+                <main className="container-fluid wt-content">
+                    {/* keyed on the path so each page plays the entry transition */}
+                    <div key={location.pathname} className="wt-page">
+                        {children}
+                    </div>
+                </main>
+            </div>
+            <CommandPalette />
+        </div>
     );
 }
 
@@ -118,13 +137,20 @@ class App extends Component {
                         <Router>
                             <Fragment>
                                 <GlobalZoomHandler />
-                                <Header/>
                                 <Alerts/>
                                 <BulkProgress/>
                                 <BulkResultModal/>
-                                <div className="container-fluid">
+                                <ThemeBackdrop/>
+                                <AppShell>
                                     <Switch>
                                         <Route exact path="/" component={Dashboard}/>
+                                        <PrivateRoute exact path="/overview" component={Overview}/>
+                                        <Route exact path="/threats_watcher/statistics" component={ThreatsWatcherStatisticsPage}/>
+                                        <Route exact path="/legitimate_domains/statistics" component={LegitimateDomainsStatisticsPage}/>
+                                        <PrivateRoute exact path="/cyber_watch/statistics" component={CyberWatchStatisticsPage}/>
+                                        <PrivateRoute exact path="/data_leak/statistics" component={DataLeakStatisticsPage}/>
+                                        <PrivateRoute exact path="/dns_finder/statistics" component={DnsFinderStatisticsPage}/>
+                                        <PrivateRoute exact path="/website_monitoring/statistics" component={SiteMonitoringStatisticsPage}/>
                                         <Route exact path="/login" component={Login}/>
                                         <PrivateRoute exact path="/password_change" component={PasswordChange}/>
                                         <PrivateRoute exact path="/profile" component={Profile}/>
@@ -136,9 +162,8 @@ class App extends Component {
                                         <PrivateRoute exact path="/connectors" component={ConnectorsDashboard}/>
                                         <Route component={NotFound}/>
                                     </Switch>
-                                </div>
+                                </AppShell>
                                 <ScrollToTopButton />
-                                <br/>
                             </Fragment>
                         </Router>
                     </AlertProvider>
