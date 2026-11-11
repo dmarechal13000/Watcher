@@ -6,6 +6,7 @@ import { Button, Modal, Container, Row, Col, Form, Tabs, Tab, Badge } from 'reac
 
 import TableManager from '../common/TableManager';
 import { SITE_ALERT_BULK } from '../../actions/SiteMonitoring';
+import { EmptyRow } from '../common/TableStates';
 
 const ALERT_TYPE_BADGES = {
     'Web content': 'info',
@@ -494,11 +495,7 @@ export class Alerts extends Component {
                                         );
                                     })}
                                     {paginatedData.length === 0 && (
-                                        <tr>
-                                            <td colSpan="5" className="text-center text-muted py-3">
-                                                No results found
-                                            </td>
-                                        </tr>
+                                        <EmptyRow colSpan={5} />
                                     )}
                                 </tbody>
                             </table>

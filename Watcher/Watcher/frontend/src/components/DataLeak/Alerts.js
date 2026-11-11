@@ -6,6 +6,10 @@ import {Button, Modal, Form} from 'react-bootstrap';
 import TableManager from '../common/TableManager';
 import DateWithTooltip from '../common/DateWithTooltip';
 import { DATALEAK_ALERT_BULK } from '../../actions/DataLeak';
+import { LoadingRows, EmptyRow } from '../common/TableStates';
+import { rowOpenProps } from '../common/DetailDrawer';
+import AlertDrawer from './AlertDrawer';
+import { claimDetail, onDetailRequest } from '../common/detailFocus';
 
 export class Alerts extends Component {
     constructor(props) {
@@ -29,11 +33,24 @@ export class Alerts extends Component {
         filteredData: PropTypes.array
     };
 
+    componentWillUnmount() {
+        if (this._unwatchDetail) this._unwatchDetail();
+    }
+
+    // Open a record requested from the command palette (Ctrl+K) once it is in the list
+    claimPendingDetail = () => {
+        const item = claimDetail('leak-alert', id => ((this.props.alerts || []).filter(a => a.status !== false)).find(x => String(x.id) === id));
+        if (item) { this.openAlertDetail(item); }
+    };
+
     componentDidMount() {
+        this._unwatchDetail = onDetailRequest(this.claimPendingDetail);
+        this.claimPendingDetail();
         this.props.getAlerts();
     }
 
     componentDidUpdate(prevProps) {
+        if (prevProps.alerts !== this.props.alerts) this.claimPendingDetail();
         if (this.props.alerts !== prevProps.alerts && this.state.isLoading) {
             this.setState({ isLoading: false });
         }
@@ -80,13 +97,8 @@ export class Alerts extends Component {
         this.setState({ show: true, id });
     };
 
-    displayContentModal = (id, keyword, content) => {
-        this.setState({
-            showContentModal: true,
-            id,
-            keyword,
-            content
-        });
+    openAlertDetail = (alert) => {
+        this.setState({ showContentModal: true, selectedAlert: alert });
     };
 
     modal = () => {
@@ -121,54 +133,6 @@ export class Alerts extends Component {
         );
     };
 
-    contentModal = () => {
-        const handleClose = () => this.setState({ showContentModal: false });
-
-        const download = (filename, text) => {
-            const element = document.createElement('a');
-            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-            element.setAttribute('download', filename);
-            element.style.display = 'none';
-            document.body.appendChild(element);
-            element.click();
-            document.body.removeChild(element);
-        };
-
-        const onSubmit = e => {
-            e.preventDefault();
-            download(`#${this.state.id}_raw.txt`, this.state.content);
-        };
-
-        return (
-            <Modal size="lg" show={this.state.showContentModal} onHide={handleClose} centered>
-                <Modal.Header closeButton>
-                    <Modal.Title><b>#{this.state.id}</b>: <b>{this.state.keyword}</b> was found</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <Form.Group>
-                        <Form.Label>Raw Content</Form.Label>
-                        <Form.Control 
-                            as="textarea" 
-                            rows={10} 
-                            value={this.state.content} 
-                            readOnly={true}
-                        />
-                    </Form.Group>
-                </Modal.Body>
-                <Modal.Footer>
-                    <form onSubmit={onSubmit}>
-                        <Button type="submit" variant="success" className="me-2">
-                            Download
-                        </Button>
-                        <Button variant="secondary" onClick={handleClose}>
-                            Close
-                        </Button>
-                    </form>
-                </Modal.Footer>
-            </Modal>
-        );
-    };
-
     getTitleAtUrl = (url) => {
         const lastChar = url.substr(url.length - 1);
         if (lastChar === '/') {
@@ -180,16 +144,7 @@ export class Alerts extends Component {
     };
 
     renderLoadingState = () => (
-        <tr>
-            <td colSpan="7" className="text-center py-5">
-                <div className="d-flex flex-column align-items-center">
-                    <div className="spinner-border text-primary mb-3" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p className="text-muted mb-0">Loading data...</p>
-                </div>
-            </td>
-        </tr>
+        <LoadingRows colSpan={7} />
     );
 
     render() {
@@ -203,7 +158,7 @@ export class Alerts extends Component {
                 <div className="row">
                     <div className="col-lg-12">
                         <div className="d-flex justify-content-between align-items-center" style={{marginBottom: 12}}>
-                            <h4>Alerts</h4>
+                            <h4 className="wt-panel-heading">Alerts</h4>
                         </div>
                     </div>
                 </div>
@@ -271,11 +226,7 @@ export class Alerts extends Component {
                                                 {this.state.isLoading ? (
                                                     this.renderLoadingState()
                                                 ) : paginatedData.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan="8" className="text-center text-muted py-4">
-                                                            No results found
-                                                        </td>
-                                                    </tr>
+                                                    <EmptyRow colSpan={8} />
                                                 ) : (
                                                     paginatedData.map(alert => {
                                                         if (!alert || !alert.url) {
@@ -293,7 +244,7 @@ export class Alerts extends Component {
                                                         if (domainName === "pastebin.com") {
                                                             pastContentButton = (
                                                                 <button 
-                                                                    onClick={() => this.displayContentModal(alert.id, alert.keyword?.name || '-', alert.content)}
+                                                                    onClick={() => this.openAlertDetail(alert)}
                                                                     className="btn btn-info btn-sm ms-2"
                                                                 >
                                                                     Content
@@ -302,7 +253,13 @@ export class Alerts extends Component {
                                                         }
                                                         
                                                         return (
-                                                            <tr key={alert.id}>
+                                                            <tr
+                                                                key={alert.id}
+                                                                {...rowOpenProps(
+                                                                    () => this.openAlertDetail(alert),
+                                                                    this.state.showContentModal && this.state.selectedAlert?.id === alert.id
+                                                                )}
+                                                            >
                                                                 {canManage && <td>{renderSelectRow(alert)}</td>}
                                                                 <td><h5>#{alert.id}</h5></td>
                                                                 <td>{alert.keyword?.name || '-'}</td>
@@ -349,7 +306,11 @@ export class Alerts extends Component {
                 </TableManager>
 
                 {this.modal()}
-                {this.contentModal()}
+                <AlertDrawer
+                    alert={this.state.selectedAlert}
+                    show={this.state.showContentModal}
+                    onHide={() => this.setState({ showContentModal: false })}
+                />
             </Fragment>
         );
     }

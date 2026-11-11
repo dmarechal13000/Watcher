@@ -5,6 +5,8 @@ import { getArchivedCVEs, getArchivedVictims, getArchivedHits, unarchiveCVE, una
 import TableManager from '../common/TableManager';
 import DateWithTooltip from '../common/DateWithTooltip';
 import { OverlayTrigger, Tooltip, Badge } from 'react-bootstrap';
+import { SeverityBadge } from '../common/SeverityBadge';
+import { EmptyRow } from '../common/TableStates';
 
 const getCveUrl = (id) => {
     if (!id) return '#';
@@ -12,13 +14,6 @@ const getCveUrl = (id) => {
     if (id.startsWith('GHSA-')) return `https://github.com/advisories/${id}`;
     if (id.startsWith('MAL-'))  return `https://vulnerability.circl.lu/vuln/${id}`;
     return `https://vulnerability.circl.lu/vuln/${id}`;
-};
-
-const SEVERITY_BADGE = {
-    CRITICAL: 'bg-danger',
-    HIGH: 'bg-warning text-dark',
-    MEDIUM: 'bg-info text-dark',
-    LOW: 'bg-success',
 };
 
 const CVE_FILTER_CONFIG = [
@@ -69,8 +64,7 @@ class ArchivedAlerts extends Component {
     };
 
     renderSeverityBadge = (severity) => {
-        if (!severity) return <span className="text-muted">-</span>;
-        return <span className={`badge ${SEVERITY_BADGE[severity] || 'bg-secondary'}`}>{severity}</span>;
+        return <SeverityBadge severity={severity} />;
     };
 
     renderCVETable = () => {
@@ -107,11 +101,7 @@ class ArchivedAlerts extends Component {
                                     </thead>
                                     <tbody>
                                         {paginatedData.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="5" className="text-center text-muted py-4">
-                                                    No results found
-                                                </td>
-                                            </tr>
+                                            <EmptyRow colSpan={5} />
                                         ) : paginatedData.map(cve => (
                                             <tr key={cve.id}>
                                                 <td className="align-middle">

@@ -15,6 +15,9 @@ import DateWithTooltip from '../common/DateWithTooltip';
 import Alerts from './Alerts';
 import ExportModal from '../common/ExportModal';
 import { TimelineModal, LastEventCell, LastEventHeader } from '../Timeline/TimelineModal';
+import { LoadingRows, EmptyRow } from '../common/TableStates';
+import { DetailDrawer, DrawerSection, DrawerFields } from '../common/DetailDrawer';
+import { claimDetail, onDetailRequest } from '../common/detailFocus';
 
 const formatDate = (date) => {
     return date.toLocaleDateString('fr-FR', {
@@ -89,7 +92,19 @@ export class SuspiciousSites extends Component {
         this.blockingRequestRef = createRef();
     }
 
+    componentWillUnmount() {
+        if (this._unwatchDetail) this._unwatchDetail();
+    }
+
+    // Open a record requested from the command palette (Ctrl+K) once it is in the list
+    claimPendingDetail = () => {
+        const item = claimDetail('site', id => (this.props.sites || []).find(x => String(x.id) === id));
+        if (item) { this.displayDetailsModal(item); }
+    };
+
     componentDidMount() {
+        this._unwatchDetail = onDetailRequest(this.claimPendingDetail);
+        this.claimPendingDetail();
         // follow the first check of the sites that are still being initialized (also after a page refresh)
         this.props.watchSiteInit();
     }
@@ -112,6 +127,7 @@ export class SuspiciousSites extends Component {
     };
 
     componentDidUpdate(prevProps) {
+        if (prevProps.sites !== this.props.sites) this.claimPendingDetail();
         const { sites, error } = this.props;
     
         if (sites !== prevProps.sites) {
@@ -396,9 +412,8 @@ export class SuspiciousSites extends Component {
     };
 
     detailsModal = () => {
-        const handleClose = () => this.setState({ showDetailsModal: false, selectedSite: null });
+        const handleClose = () => this.setState({ showDetailsModal: false });
         const site = this.state.selectedSite;
-
         if (!site) return null;
 
         const formatMXRecords = (mxRecords) => {
@@ -423,51 +438,72 @@ export class SuspiciousSites extends Component {
             return "-";
         };
 
+        const legitimacy = LEGITIMACY_LABELS[site.legitimacy];
+        const yesNo = v => (v ? 'Yes' : 'No');
+        const date = (v, time = false) => v && <DateWithTooltip date={v} includeTime={time} type="created" />;
+
         return (
-            <Modal show={this.state.showDetailsModal} onHide={handleClose} centered>
-                <Modal.Header closeButton>
-                    <Modal.Title>Technical details for <b>{site.domain_name}</b></Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <Container>
-                        <Row className="show-grid">
-                            <Col md={12}>
-                            <Form.Group as={Row}>
-                                <Form.Label column sm="4">Primary IP</Form.Label>
-                                <Col sm="8" className="mt-2">
-                                    {site.ip || "-"}
-                                </Col>
-                                <Form.Label column sm="4">Secondary IP</Form.Label>
-                                <Col sm="8" className="mt-2">
-                                    {site.ip_second || "-"}
-                                </Col>
-                                <Form.Label column sm="4">MX Records</Form.Label>
-                                <Col sm="8" className="mt-2">
-                                    {formatMXRecords(site.MX_records)}
-                                </Col>
-                                <Form.Label column sm="4">Mail Server IP</Form.Label>
-                                <Col sm="8" className="mt-2">
-                                    {site.mail_A_record_ip || "-"}
-                                </Col>
-                                <Form.Label column sm="4">Server Banner</Form.Label>
-                                <Col sm="8" className="mt-2">
-                                    {site.server_banner || "-"}
-                                </Col>
-                                <Form.Label column sm="4">X-Powered-By</Form.Label>
-                                <Col sm="8" className="mt-2">
-                                    {site.x_powered_by || "-"}
-                                </Col>
-                            </Form.Group>
-                                <Col md={{span: 3, offset: 10}}>
-                                    <Button variant="secondary" onClick={handleClose}>
-                                        Close
-                                    </Button>
-                                </Col>
-                            </Col>
-                        </Row>
-                    </Container>
-                </Modal.Body>
-            </Modal>
+            <DetailDrawer
+                show={this.state.showDetailsModal}
+                onHide={handleClose}
+                icon="language"
+                title={site.domain_name}
+                subtitle={`Technical details${site.ticket_id ? ` · Ticket ${site.ticket_id}` : ''}`}
+                badges={
+                    <>
+                        {legitimacy && (
+                            <span className="badge" style={{ backgroundColor: legitimacy.color, color: legitimacy.textColor }}>
+                                {legitimacy.label}
+                            </span>
+                        )}
+                        <span className={`badge ${site.monitored ? 'bg-success' : 'bg-secondary'}`}>
+                            {site.monitored ? 'Monitored' : 'Monitoring pending'}
+                        </span>
+                        {site.web_status && <span className="badge bg-secondary">HTTP {site.web_status}</span>}
+                    </>
+                }
+                actions={
+                    <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => { handleClose(); this.displayAlerts(site); }}
+                    >
+                        <i className="material-icons" aria-hidden="true">notifications</i>
+                        View alerts
+                    </button>
+                }
+            >
+                <DrawerSection title="Network" icon="settings_ethernet">
+                    <DrawerFields items={[
+                        { label: 'Primary IP', value: site.ip, mono: true },
+                        { label: 'Secondary IP', value: site.ip_second, mono: true },
+                        { label: 'MX Records', value: formatMXRecords(site.MX_records) !== '-' ? formatMXRecords(site.MX_records) : null, mono: true, wide: true },
+                        { label: 'Mail Server IP', value: site.mail_A_record_ip, mono: true },
+                        { label: 'Server Banner', value: site.server_banner, mono: true },
+                        { label: 'X-Powered-By', value: site.x_powered_by, mono: true },
+                    ]} />
+                </DrawerSection>
+
+                <DrawerSection title="Domain" icon="dns">
+                    <DrawerFields items={[
+                        { label: 'Registrar', value: site.registrar },
+                        { label: 'RTIR', value: site.rtir },
+                        { label: 'Registered', value: date(site.domain_created_at) },
+                        { label: 'Domain expiry', value: date(site.domain_expiry) },
+                        { label: 'SSL expiry', value: date(site.ssl_expiry) },
+                        { label: 'Monitoring ends', value: date(site.expiry, true) },
+                    ]} />
+                </DrawerSection>
+
+                <DrawerSection title="Response" icon="gavel">
+                    <DrawerFields items={[
+                        { label: 'Takedown request', value: yesNo(site.takedown_request) },
+                        { label: 'Legal team', value: yesNo(site.legal_team) },
+                        { label: 'Blocking request', value: yesNo(site.blocking_request) },
+                        { label: 'UDRP status', value: site.udrp_status },
+                    ]} />
+                </DrawerSection>
+            </DetailDrawer>
         );
     };
 
@@ -1192,16 +1228,7 @@ export class SuspiciousSites extends Component {
     };
 
     renderLoadingState = () => (
-        <tr>
-            <td colSpan="14" className="text-center py-5">
-                <div className="d-flex flex-column align-items-center">
-                    <div className="spinner-border text-primary mb-3" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p className="text-muted mb-0">Loading data...</p>
-                </div>
-            </td>
-        </tr>
+        <LoadingRows colSpan={14} />
     );
 
     render() {
@@ -1264,7 +1291,7 @@ export class SuspiciousSites extends Component {
         return (
             <Fragment>
                 <div className="d-flex justify-content-between align-items-center mb-4">
-                    <h4>Suspicious Websites Monitored</h4>
+                    <h4 className="wt-panel-heading">Suspicious Websites Monitored</h4>
                     <div>
                         {canAdd && (
                             <Button variant="success" onClick={this.displayAddModal}>
@@ -1375,11 +1402,7 @@ export class SuspiciousSites extends Component {
                                                 {this.state.isLoading ? (
                                                     this.renderLoadingState()
                                                 ) : paginatedData.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan="15" className="text-center text-muted py-4">
-                                                            No results found
-                                                        </td>
-                                                    </tr>
+                                                    <EmptyRow colSpan={15} />
                                                 ) : (
                                                     paginatedData.map(site => (
                                                         <tr

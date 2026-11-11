@@ -9,6 +9,7 @@ import { DNS_MONITORED_BULK } from '../../actions/DnsFinder';
 import TableManager from '../common/TableManager';
 import DateWithTooltip from '../common/DateWithTooltip';
 import { TimelineModal, LastEventCell, LastEventHeader } from '../Timeline/TimelineModal';
+import { LoadingRows, EmptyRow } from '../common/TableStates';
 
 export class DnsMonitored extends Component {
     constructor(props) {
@@ -328,16 +329,7 @@ export class DnsMonitored extends Component {
         const { showTimelineModal, timelineId, timelineLabel } = this.state;
 
         const renderLoadingState = () => (
-            <tr>
-                <td colSpan="4" className="text-center py-5">
-                    <div className="d-flex flex-column align-items-center">
-                        <div className="spinner-border text-primary mb-3" role="status">
-                            <span className="visually-hidden">Loading...</span>
-                        </div>
-                        <p className="text-muted mb-0">Loading data...</p>
-                    </div>
-                </td>
-            </tr>
+            <LoadingRows colSpan={4} />
         );
 
         return (
@@ -346,7 +338,7 @@ export class DnsMonitored extends Component {
                     <div className="col-lg-12">
                         <div className="d-flex justify-content-between align-items-center" style={{marginBottom: 12}}>
                             <div>
-                                <h4>Corporate DNS Assets Monitored</h4>
+                                <h4 className="wt-panel-heading">Corporate DNS Assets Monitored</h4>
                                 <h6 className="text-muted">Dnstwist Algorithm & Subdomain Takeover Detection</h6>
                             </div>
                             <div>
@@ -413,11 +405,7 @@ export class DnsMonitored extends Component {
                                                 {this.state.isLoading ? (
                                                     renderLoadingState()
                                                 ) : paginatedData.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan="5" className="text-center text-muted py-4">
-                                                            No results found
-                                                        </td>
-                                                    </tr>
+                                                    <EmptyRow colSpan={5} />
                                                 ) : (
                                                     paginatedData.map(domain => (
                                                         <tr key={domain.id}>

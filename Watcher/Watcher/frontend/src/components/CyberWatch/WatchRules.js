@@ -11,6 +11,7 @@ import { Button, Modal, Form, Badge } from 'react-bootstrap';
 import TableManager from '../common/TableManager';
 import DateWithTooltip from '../common/DateWithTooltip';
 import { TimelineModal, LastEventCell, LastEventHeader } from '../Timeline/TimelineModal';
+import { EmptyRow } from '../common/TableStates';
 
 
 const SCOPE_LABELS = { cve: 'CVE', ransomware: 'Ransomware', both: 'Both' };
@@ -325,11 +326,7 @@ class WatchRules extends Component {
                                             </thead>
                                             <tbody>
                                                 {paginatedData.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={canManage ? 7 : 6} className="text-center text-muted py-4">
-                                                            No results found
-                                                        </td>
-                                                    </tr>
+                                                    <EmptyRow colSpan={canManage ? 7 : 6} />
                                                 ) : (
                                                     paginatedData.map(rule => (
                                                         <tr key={rule.id}>

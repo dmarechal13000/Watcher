@@ -15,6 +15,7 @@ import { MONITORED_KEYWORD_BULK } from '../../actions/leads';
 import TableManager from '../common/TableManager';
 import DateWithTooltip from '../common/DateWithTooltip';
 import { TimelineModal, LastEventCell, LastEventHeader } from '../Timeline/TimelineModal';
+import { EmptyRow } from '../common/TableStates';
 
 
 const LEVEL_VALUES = ['warm', 'hot', 'super_hot'];
@@ -193,7 +194,7 @@ class MonitoredKeywordsPanel extends Component {
         return (
             <Fragment>
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h4>Monitored Keywords</h4>
+                    <h4 className="wt-panel-heading">Monitored Keywords</h4>
                     {canAdd && (
                         <button className="btn btn-success" onClick={() => this.setState({ showAddModal: true })}>
                             <i className="material-icons me-1" style={{ verticalAlign: 'middle', fontSize: '18px' }}>add_circle</i>
@@ -265,7 +266,7 @@ class MonitoredKeywordsPanel extends Component {
                                     </thead>
                                     <tbody>
                                         {paginatedData.length === 0 ? (
-                                            <tr><td colSpan={canManage ? 7 : 5} className="text-center text-muted py-4">No results found</td></tr>
+                                            <EmptyRow colSpan={canManage ? 7 : 5} />
                                         ) : paginatedData.map(mk => (
                                             <tr key={mk.id} style={{ cursor: 'pointer' }} onClick={() => this.openSourcesModal(mk)} title="Click to see detected sources">
                                                 {canManage && <td className="align-middle">{renderSelectRow(mk)}</td>}
@@ -404,7 +405,7 @@ class MonitoredKeywordsPanel extends Component {
                                                     </thead>
                                                     <tbody>
                                                         {paginatedData.length === 0 ? (
-                                                            <tr><td colSpan={3} className="text-center text-muted py-4">No results found</td></tr>
+                                                            <EmptyRow colSpan={3} />
                                                         ) : paginatedData.map(item => (
                                                             <tr key={item.id} style={{ cursor: 'pointer' }} onClick={() => window.open(item.url, '_blank', 'noreferrer')}>
                                                                 <td className="align-middle fw-semibold" style={{ whiteSpace: 'nowrap' }}>{item.domainName}</td>

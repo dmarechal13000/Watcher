@@ -6,6 +6,7 @@ import { Button, Modal, Form } from 'react-bootstrap';
 import TableManager from '../common/TableManager';
 import DateWithTooltip from '../common/DateWithTooltip';
 import { TimelineModal, LastEventCell, LastEventHeader } from '../Timeline/TimelineModal';
+import { EmptyRow } from '../common/TableStates';
 
 const FILTER_CONFIG = [
     { key: 'search',  type: 'search', label: 'Search',  placeholder: 'Search by URL or country...', width: 4 },
@@ -221,7 +222,7 @@ class SourcesPanel extends Component {
         return (
             <Fragment>
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h4>RSS Sources</h4>
+                    <h4 className="wt-panel-heading">RSS Sources</h4>
                     {canManage && (
                         <button className="btn btn-success" onClick={this.openAddModal}>
                             <i className="material-icons me-1" style={{ verticalAlign: 'middle', fontSize: '18px' }}>add_circle</i>
@@ -282,7 +283,7 @@ class SourcesPanel extends Component {
                                     </thead>
                                     <tbody>
                                         {paginatedData.length === 0 ? (
-                                            <tr><td colSpan={canManage ? 7 : 6} className="text-center text-muted py-4">No results found</td></tr>
+                                            <EmptyRow colSpan={canManage ? 7 : 6} />
                                         ) : paginatedData.map(source => (
                                             <tr key={source.id}>
                                                 <td className="align-middle" style={{ maxWidth: 280, wordBreak: 'break-all' }}>

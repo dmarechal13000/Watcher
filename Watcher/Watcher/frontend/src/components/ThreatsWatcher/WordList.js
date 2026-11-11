@@ -8,6 +8,7 @@ import { OverlayTrigger, Tooltip } from 'react-bootstrap';
 import TableManager from '../common/TableManager';
 import DateWithTooltip from '../common/DateWithTooltip';
 import { ISO2_TO_GEO, isoToFlag } from '../../utils/isoCountries';
+import { LoadingRows, EmptyRow } from '../common/TableStates';
 
 /** Extract registrable domain from a URL (same logic as WorldMap). */
 function extractDomain(url) {
@@ -239,16 +240,7 @@ export class WordList extends Component {
     };
 
     renderLoadingState = () => (
-        <tr>
-            <td colSpan="5" className="text-center py-5">
-                <div className="d-flex flex-column align-items-center">
-                    <div className="spinner-border text-primary mb-3" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p className="text-muted mb-0">Loading data...</p>
-                </div>
-            </td>
-        </tr>
+        <LoadingRows colSpan={5} />
     );
 
 
@@ -299,8 +291,14 @@ export class WordList extends Component {
         const countryName = filterCountry ? (ISO2_TO_GEO[filterCountry] || filterCountry) : null;
 
         const authLinks = (id, name) => (
-            <button onClick={() => this.displayModal(id, name)} className="btn btn-danger btn-sm">
-                Delete &amp; BlockList
+            <button
+                onClick={() => this.displayModal(id, name)}
+                className="btn btn-danger btn-sm wt-btn-icon-text"
+                title={`Delete "${name}" and add it to the blocklist`}
+            >
+                <i className="material-icons" aria-hidden="true">block</i>
+                <span>Block</span>
+                <span className="visually-hidden"> (Delete &amp; BlockList)</span>
             </button>
         );
 
@@ -314,7 +312,7 @@ export class WordList extends Component {
         return (
             <Fragment>
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h4 className="mb-0">Trendy Words</h4>
+                    <h4 className="mb-0 wt-panel-heading">Trendy Words</h4>
                     <div className="d-flex align-items-center gap-2 flex-wrap">
                         {countryName && (
                             <div
@@ -378,7 +376,7 @@ export class WordList extends Component {
 
                             <div className="row">
                                 <div className="col-lg-12">
-                                    <div style={{ ...getTableContainerStyle(),  overflowX: 'auto' }}>
+                                    <div className="wt-table-fit" style={{ ...getTableContainerStyle(),  overflowX: 'auto' }}>
                                         <table className="table table-striped table-hover mb-0" style={{ fontSize: '0.95rem' }}>
                                             <thead ref={theadRef}>
                                                 <tr>
@@ -417,11 +415,7 @@ export class WordList extends Component {
                                                 {this.state.isLoading ? (
                                                     this.renderLoadingState()
                                                 ) : paginatedData.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan="5" className="text-center text-muted py-4">
-                                                            No results found
-                                                        </td>
-                                                    </tr>
+                                                    <EmptyRow colSpan={5} />
                                                 ) : (
                                                     paginatedData.map(lead => (
                                                         <tr
@@ -494,8 +488,8 @@ export class WordList extends Component {
                                                                     <span className="text-muted" style={{ fontSize: 'inherit' }}>N/A</span>
                                                                 )}
                                                             </td>
-                                                            <td className="text-center align-middle">
-                                                                <small style={{ fontSize: '1rem' }}>
+                                                            <td className="text-center align-middle text-nowrap">
+                                                                <small style={{ fontSize: '.9rem' }}>
                                                                     <DateWithTooltip 
                                                                         date={lead.created_at} 
                                                                         includeTime={true}
@@ -503,7 +497,7 @@ export class WordList extends Component {
                                                                     />
                                                                 </small>
                                                             </td>
-                                                            <td className="text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                                                            <td className="text-end align-middle text-nowrap" onClick={(e) => e.stopPropagation()}>
                                                                 {canManage && authLinks(lead.id, lead.name)}
                                                             </td>
                                                         </tr>

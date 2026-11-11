@@ -6,7 +6,10 @@ import TableManager from '../common/TableManager';
 import DateWithTooltip from '../common/DateWithTooltip';
 import { getRansomwareVictims, getWatchRuleHits, archiveVictim, archiveHit } from '../../actions/CyberWatch';
 import { ISO2_TO_GEO, isoToFlag } from '../../utils/isoCountries';
-import { Modal, Badge } from 'react-bootstrap';
+import { Badge } from 'react-bootstrap';
+import { DetailDrawer, DrawerSection, DrawerFields, rowOpenProps } from '../common/DetailDrawer';
+import { claimDetail, onDetailRequest } from '../common/detailFocus';
+import { claimFilters, withFilterDefaults } from '../common/pendingFilters';
 
 const EmptyHitsState = ({ type }) => (
     <tr>
@@ -51,10 +54,14 @@ const FILTER_CONFIG = [
 class RansomwareVictims extends Component {
     constructor(props) {
         super(props);
+        // Filter requested by a click on the Statistics tab (see common/pendingFilters)
+        this.anchorRef = React.createRef();
+        this.requestedFilters = claimFilters('victims');
         this.state = {
             activeTab: 'all', // 'hits' or 'all'
             selectedHit:     null,
             showDetailModal: false,
+            selectedVictim: null,
         };
     }
 
@@ -71,7 +78,23 @@ class RansomwareVictims extends Component {
         onVictimClick: PropTypes.func,
     };
 
+    componentWillUnmount() {
+        if (this._unwatchDetail) this._unwatchDetail();
+    }
+
+    // Open a record requested from the command palette (Ctrl+K) once it is in the list
+    claimPendingDetail = () => {
+        const item = claimDetail('victim', id => (this.props.ransomwareVictims).find(x => String(x.id) === id));
+        if (item) { this.setState({ activeTab: 'all' }); this.openVictimDetail(item); }
+    };
+
     componentDidMount() {
+        if (this.requestedFilters) {
+            // Arriving from a chart click: bring the filtered table into view
+            setTimeout(() => this.anchorRef.current && this.anchorRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400);
+        }
+        this._unwatchDetail = onDetailRequest(this.claimPendingDetail);
+        this.claimPendingDetail();
         if (!this.props.ransomwareVictims.length) {
             this.props.getRansomwareVictims();
         }
@@ -81,6 +104,7 @@ class RansomwareVictims extends Component {
     }
 
     componentDidUpdate(prevProps) {
+        if (prevProps.ransomwareVictims !== this.props.ransomwareVictims) this.claimPendingDetail();
     }
 
     getRansomwareHits = () => {
@@ -102,84 +126,75 @@ class RansomwareVictims extends Component {
     };
 
     openDetailModal = (hit) =>
-        this.setState({ selectedHit: hit, showDetailModal: true });
+        this.setState({ selectedHit: hit, selectedVictim: null, showDetailModal: true });
 
+    openVictimDetail = (victim) =>
+        this.setState({ selectedHit: null, selectedVictim: victim, showDetailModal: true });
+
+    // Keep the selection while the drawer slides out; it is replaced on the next open.
     closeDetailModal = () =>
-        this.setState({ selectedHit: null, showDetailModal: false });
+        this.setState({ showDetailModal: false });
 
     renderDetailModal = () => {
-        const { selectedHit, showDetailModal } = this.state;
-        if (!selectedHit) return null;
-        const victim = this.getVictimForHit(selectedHit);
-        const parts = (selectedHit.object_id || '').split('::');
-        const victimDisplayName = parts.length >= 2 ? parts.slice(1).join('::') : parts[0];
-        const groupDisplayName  = parts.length >= 2 ? parts[0] : null;
+        const { selectedHit, selectedVictim, showDetailModal } = this.state;
+        if (!selectedHit && !selectedVictim) return null;
+        const victim = selectedVictim || this.getVictimForHit(selectedHit);
+        const parts = ((selectedHit && selectedHit.object_id) || '').split('::');
+        const name = victim ? victim.victim_name : (parts.length >= 2 ? parts.slice(1).join('::') : parts[0]);
+        const group = victim ? (victim.group_name || victim.group) : (parts.length >= 2 ? parts[0] : null);
+        const sector = victim && victim.sector && victim.sector !== 'Not Found' ? victim.sector : null;
+        const country = victim && victim.country && victim.country !== '-' ? victim.country : null;
+
         return (
-            <Modal show={showDetailModal} onHide={this.closeDetailModal} size="lg" centered>
-                <Modal.Header closeButton>
-                    <Modal.Title>
-                        <span className="fw-semibold">{victimDisplayName}</span>
-                        {groupDisplayName && (
-                            <span className="ms-2">
-                                <Badge bg="danger">{groupDisplayName}</Badge>
-                            </span>
-                        )}
-                    </Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <dl className="row mb-0">
-                        <dt className="col-sm-3">Rule</dt>
-                        <dd className="col-sm-9">{selectedHit.rule_name || '-'}</dd>
+            <DetailDrawer
+                show={showDetailModal}
+                onHide={this.closeDetailModal}
+                icon="lock"
+                title={name}
+                subtitle={group ? `Claimed by ${group}` : 'Ransomware victim'}
+                badges={(group || country) ? (
+                    <>
+                        {group && <Badge bg="danger">{group}</Badge>}
+                        {country && <Badge bg="secondary">{isoToFlag(country)} {country}</Badge>}
+                        {sector && <Badge bg="secondary">{sector}</Badge>}
+                    </>
+                ) : null}
+                actions={victim && victim.url ? (
+                    <a href={victim.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+                        <i className="material-icons" aria-hidden="true">open_in_new</i>
+                        Open source page
+                    </a>
+                ) : null}
+            >
+                {selectedHit && (
+                    <DrawerSection title="Watch rule match" icon="visibility">
+                        <DrawerFields items={[
+                            { label: 'Rule', value: selectedHit.rule_name },
+                            { label: 'Keyword', value: selectedHit.matched_keyword && <Badge bg="secondary">{selectedHit.matched_keyword}</Badge> },
+                            { label: 'Hit date', value: <DateWithTooltip date={selectedHit.hit_at} includeTime={true} type="created" /> },
+                        ]} />
+                    </DrawerSection>
+                )}
 
-                        <dt className="col-sm-3">Keyword</dt>
-                        <dd className="col-sm-9"><Badge bg="secondary">{selectedHit.matched_keyword}</Badge></dd>
-
-                        <dt className="col-sm-3">Hit date</dt>
-                        <dd className="col-sm-9">
-                            <DateWithTooltip date={selectedHit.hit_at} includeTime={true} type="created" />
-                        </dd>
-
-                        {victim ? (
-                            <Fragment>
-                                <dt className="col-sm-3">Group</dt>
-                                <dd className="col-sm-9">
-                                    <Badge bg="danger">{victim.group_name || victim.group || '-'}</Badge>
-                                </dd>
-
-                                <dt className="col-sm-3">Country</dt>
-                                <dd className="col-sm-9">{victim.country || <span className="text-muted">-</span>}</dd>
-
-                                <dt className="col-sm-3">Sector</dt>
-                                <dd className="col-sm-9">{victim.sector && victim.sector !== 'Not Found' ? victim.sector : <span className="text-muted">-</span>}</dd>
-
-                                <dt className="col-sm-3">Attacked</dt>
-                                <dd className="col-sm-9">
-                                    {victim.attacked_at
-                                        ? <DateWithTooltip date={victim.attacked_at} includeTime={false} type="created" />
-                                        : <span className="text-muted">-</span>}
-                                </dd>
-
-                                {victim.url && (
-                                    <Fragment>
-                                        <dt className="col-sm-3">URL</dt>
-                                        <dd className="col-sm-9">
-                                            <a href={victim.url} target="_blank" rel="noopener noreferrer"
-                                                style={{ wordBreak: 'break-all' }}>{victim.url}</a>
-                                        </dd>
-                                    </Fragment>
-                                )}
-                            </Fragment>
-                        ) : (
-                            <Fragment>
-                                <dt className="col-sm-3">Details</dt>
-                                <dd className="col-sm-9 text-muted fst-italic">
-                                    {selectedHit.hit_display || 'No additional details available.'}
-                                </dd>
-                            </Fragment>
-                        )}
-                    </dl>
-                </Modal.Body>
-            </Modal>
+                {victim ? (
+                    <DrawerSection title="Attack" icon="gavel">
+                        <DrawerFields items={[
+                            { label: 'Group', value: group },
+                            { label: 'Country', value: country && `${isoToFlag(country)} ${country}` },
+                            { label: 'Sector', value: sector },
+                            { label: 'Attacked', value: victim.attacked_at && <DateWithTooltip date={victim.attacked_at} includeTime={false} type="created" /> },
+                            { label: 'Collected', value: victim.fetched_at && <DateWithTooltip date={victim.fetched_at} includeTime={true} type="created" /> },
+                            { label: 'Source page', value: victim.url && <a href={victim.url} target="_blank" rel="noopener noreferrer">{victim.url}</a>, mono: true, wide: true },
+                        ]} />
+                    </DrawerSection>
+                ) : (
+                    <DrawerSection title="Attack" icon="gavel">
+                        <p className="wt-drawer-text text-muted fst-italic">
+                            {(selectedHit && selectedHit.hit_display) || 'No additional details available.'}
+                        </p>
+                    </DrawerSection>
+                )}
+            </DetailDrawer>
         );
     };
 
@@ -249,8 +264,9 @@ class RansomwareVictims extends Component {
 
         return (
             <Fragment>
+                <span ref={this.anchorRef} className="wt-scroll-anchor" aria-hidden="true" />
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h4 className="mb-0">Ransomware Victims</h4>
+                    <h4 className="mb-0 wt-panel-heading">Ransomware Victims</h4>
                     {countryName && (
                         <div
                             className="d-flex align-items-center gap-1 px-2 py-1"
@@ -364,7 +380,13 @@ class RansomwareVictims extends Component {
                                                             const victimName = parts.length >= 2 ? parts.slice(1).join('::') : parts[0];
                                                             const groupName  = parts.length >= 2 ? parts[0] : null;
                                                             return (
-                                                                <tr key={hit.id}>
+                                                                <tr
+                                                                    key={hit.id}
+                                                                    {...rowOpenProps(
+                                                                        () => this.openDetailModal(hit),
+                                                                        this.state.showDetailModal && this.state.selectedHit?.id === hit.id
+                                                                    )}
+                                                                >
                                                                     <td className="align-middle fw-semibold">{hit.rule_name}</td>
                                                                     <td className="align-middle">
                                                                         <span className="fw-medium">{victimName}</span>
@@ -415,7 +437,8 @@ class RansomwareVictims extends Component {
                 ) : (
                     <TableManager
                         data={data}
-                        filterConfig={filterConfig}
+                        filterConfig={withFilterDefaults(filterConfig, this.requestedFilters)}
+                        revealFilters={!!this.requestedFilters}
                         searchFields={['victim_name', 'group_name']}
                         dateFields={['attacked_at']}
                         defaultSort="attacked_at"
@@ -484,9 +507,10 @@ class RansomwareVictims extends Component {
                                                     paginatedData.map(v => (
                                                         <tr
                                                             key={v.id}
-                                                            role="button"
-                                                            style={{ cursor: v.url ? 'pointer' : 'default' }}
-                                                            onClick={() => v.url && window.open(v.url, '_blank', 'noopener')}
+                                                            {...rowOpenProps(
+                                                                () => this.openVictimDetail(v),
+                                                                this.state.showDetailModal && this.state.selectedVictim?.id === v.id
+                                                            )}
                                                         >
                                                             <td className="align-middle fw-medium">
                                                                 {v.victim_name}

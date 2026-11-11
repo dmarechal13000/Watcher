@@ -3,9 +3,14 @@ import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { getCVEs, getWatchRuleHits, archiveCVE, archiveHit } from '../../actions/CyberWatch';
-import { OverlayTrigger, Tooltip, Modal, Badge } from 'react-bootstrap';
+import { OverlayTrigger, Tooltip, Badge } from 'react-bootstrap';
 import TableManager from '../common/TableManager';
 import DateWithTooltip from '../common/DateWithTooltip';
+import { SeverityBadge, CvssScore } from '../common/SeverityBadge';
+import { EmptyRow } from '../common/TableStates';
+import { DetailDrawer, DrawerSection, DrawerFields, rowOpenProps } from '../common/DetailDrawer';
+import { claimDetail, onDetailRequest } from '../common/detailFocus';
+import { claimFilters, withFilterDefaults } from '../common/pendingFilters';
 
 const getCveUrl = (id) => {
     if (!id) return '#';
@@ -13,13 +18,6 @@ const getCveUrl = (id) => {
     if (id.startsWith('GHSA-')) return `https://github.com/advisories/${id}`;
     if (id.startsWith('MAL-'))  return `https://vulnerability.circl.lu/vuln/${id}`;
     return `https://vulnerability.circl.lu/vuln/${id}`;
-};
-
-const SEVERITY_BADGE = {
-    CRITICAL: 'bg-danger',
-    HIGH:     'bg-warning text-dark',
-    MEDIUM:   'bg-info text-dark',
-    LOW:      'bg-success'
 };
 
 const FILTER_CONFIG = [
@@ -85,10 +83,14 @@ const HITS_FILTER_CONFIG = [
 class CVEVulnerabilities extends Component {
     constructor(props) {
         super(props);
+        // Filter requested by a click on the Statistics tab (see common/pendingFilters)
+        this.anchorRef = React.createRef();
+        this.requestedFilters = claimFilters('cve');
         this.state = {
             activeTab:       'all',
             selectedHit:     null,
             showDetailModal: false,
+            selectedCve: null,
         };
     }
 
@@ -102,7 +104,23 @@ class CVEVulnerabilities extends Component {
         auth:             PropTypes.object.isRequired,
     };
 
+    componentWillUnmount() {
+        if (this._unwatchDetail) this._unwatchDetail();
+    }
+
+    // Open a record requested from the command palette (Ctrl+K) once it is in the list
+    claimPendingDetail = () => {
+        const item = claimDetail('cve', id => (this.props.cves).find(x => String(x.id) === id));
+        if (item) { this.setState({ activeTab: 'all' }); this.openCveDetail(item); }
+    };
+
     componentDidMount() {
+        if (this.requestedFilters) {
+            // Arriving from a chart click: bring the filtered table into view
+            setTimeout(() => this.anchorRef.current && this.anchorRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400);
+        }
+        this._unwatchDetail = onDetailRequest(this.claimPendingDetail);
+        this.claimPendingDetail();
         this.props.getCVEs({});
         if (!this.props.watchRuleHits.length) {
             this.props.getWatchRuleHits();
@@ -110,6 +128,7 @@ class CVEVulnerabilities extends Component {
     }
 
     componentDidUpdate(prevProps) {
+        if (prevProps.cves !== this.props.cves) this.claimPendingDetail();
     }
 
     getCVEHits = () =>
@@ -137,111 +156,99 @@ class CVEVulnerabilities extends Component {
     };
 
     renderSeverityBadge = (severity) => {
-        if (!severity) return <span className="text-muted">-</span>;
-        return <span className={`badge ${SEVERITY_BADGE[severity] || 'bg-secondary'}`}>{severity}</span>;
+        return <SeverityBadge severity={severity} />;
     };
 
     openDetailModal = (hit) =>
-        this.setState({ selectedHit: hit, showDetailModal: true });
+        this.setState({ selectedHit: hit, selectedCve: null, showDetailModal: true });
 
+    openCveDetail = (cve) =>
+        this.setState({ selectedHit: null, selectedCve: cve, showDetailModal: true });
+
+    // Keep the selection while the drawer slides out; it is replaced on the next open.
     closeDetailModal = () =>
-        this.setState({ selectedHit: null, showDetailModal: false });
+        this.setState({ showDetailModal: false });
+
+    renderReferences = (references) => {
+        const urls = (Array.isArray(references) ? references : [])
+            .map(ref => (typeof ref === 'object' ? (ref.url || '') : ref))
+            .filter(Boolean);
+        if (urls.length === 0) return null;
+        return (
+            <DrawerSection title={`References (${urls.length})`} icon="link">
+                <ul className="wt-drawer-links">
+                    {urls.slice(0, 12).map((url, i) => (
+                        <li key={i}>
+                            <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
+                        </li>
+                    ))}
+                    {urls.length > 12 && <li className="text-muted">...and {urls.length - 12} more</li>}
+                </ul>
+            </DrawerSection>
+        );
+    };
 
     renderDetailModal = () => {
-        const { selectedHit, showDetailModal } = this.state;
-        if (!selectedHit) return null;
-        const cve = this.getCVEForHit(selectedHit);
+        const { selectedHit, selectedCve, showDetailModal } = this.state;
+        if (!selectedHit && !selectedCve) return null;
+        const cve = selectedCve || this.getCVEForHit(selectedHit);
+        const cveId = cve ? cve.cve_id : selectedHit.object_id;
+
         return (
-            <Modal show={showDetailModal} onHide={this.closeDetailModal} size="lg" centered>
-                <Modal.Header closeButton>
-                    <Modal.Title>
-                        <a
-                            href={getCveUrl(selectedHit.object_id)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-decoration-none fw-semibold"
-                        >
-                            {selectedHit.object_id}
-                        </a>
-                        {cve && (
-                            <span className="ms-2">
-                                {this.renderSeverityBadge(cve.severity)}
-                            </span>
-                        )}
-                    </Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <dl className="row mb-0">
-                        <dt className="col-sm-3">Rule</dt>
-                        <dd className="col-sm-9">{selectedHit.rule_name || '-'}</dd>
+            <DetailDrawer
+                show={showDetailModal}
+                onHide={this.closeDetailModal}
+                icon="bug_report"
+                title={cveId}
+                subtitle={cve && cve.published ? `Published ${new Date(cve.published).toLocaleDateString()}` : 'Vulnerability'}
+                badges={cve ? (
+                    <>
+                        <SeverityBadge severity={cve.severity} />
+                        <CvssScore score={cve.cvss_score} />
+                    </>
+                ) : null}
+                actions={
+                    <a href={getCveUrl(cveId)} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+                        <i className="material-icons" aria-hidden="true">open_in_new</i>
+                        Open in CIRCL
+                    </a>
+                }
+            >
+                {selectedHit && (
+                    <DrawerSection title="Watch rule match" icon="visibility">
+                        <DrawerFields items={[
+                            { label: 'Rule', value: selectedHit.rule_name },
+                            { label: 'Keyword', value: selectedHit.matched_keyword && <Badge bg="secondary">{selectedHit.matched_keyword}</Badge> },
+                            { label: 'Hit date', value: <DateWithTooltip date={selectedHit.hit_at} includeTime={true} type="created" /> },
+                        ]} />
+                    </DrawerSection>
+                )}
 
-                        <dt className="col-sm-3">Keyword</dt>
-                        <dd className="col-sm-9"><Badge bg="secondary">{selectedHit.matched_keyword}</Badge></dd>
-
-                        <dt className="col-sm-3">Hit date</dt>
-                        <dd className="col-sm-9">
-                            <DateWithTooltip date={selectedHit.hit_at} includeTime={true} type="created" />
-                        </dd>
-
-                        {cve && (
-                            <Fragment>
-                                <dt className="col-sm-3">CVSS Score</dt>
-                                <dd className="col-sm-9">
-                                    {cve.cvss_score != null ? (
-                                        <span className="fw-semibold">{cve.cvss_score}</span>
-                                    ) : (
-                                        <span className="text-muted">-</span>
-                                    )}
-                                </dd>
-
-                                <dt className="col-sm-3">Published</dt>
-                                <dd className="col-sm-9">
-                                    {cve.published
-                                        ? <DateWithTooltip date={cve.published} includeTime={false} type="created" />
-                                        : <span className="text-muted">-</span>}
-                                </dd>
-
-                                <dt className="col-sm-3">Information</dt>
-                                <dd className="col-sm-9" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                    {cve.description || <span className="text-muted fst-italic">No information</span>}
-                                </dd>
-
-                                {Array.isArray(cve.references) && cve.references.length > 0 && (
-                                    <Fragment>
-                                        <dt className="col-sm-3">References</dt>
-                                        <dd className="col-sm-9">
-                                            <ul className="mb-0 ps-3">
-                                                {cve.references.slice(0, 5).map((ref, i) => {
-                                                    const url = typeof ref === 'object' ? (ref.url || '') : ref;
-                                                    if (!url) return null;
-                                                    return (
-                                                        <li key={i}>
-                                                            <a href={url} target="_blank" rel="noopener noreferrer"
-                                                                style={{ wordBreak: 'break-all' }}>{url}</a>
-                                                        </li>
-                                                    );
-                                                })}
-                                                {cve.references.length > 5 && (
-                                                    <li className="text-muted">...and {cve.references.length - 5} more</li>
-                                                )}
-                                            </ul>
-                                        </dd>
-                                    </Fragment>
-                                )}
-                            </Fragment>
-                        )}
-
-                        {!cve && (
-                            <Fragment>
-                                <dt className="col-sm-3">Details</dt>
-                                <dd className="col-sm-9 text-muted fst-italic">
-                                    CVE details not loaded - switch to "All CVEs" tab to load them.
-                                </dd>
-                            </Fragment>
-                        )}
-                    </dl>
-                </Modal.Body>
-            </Modal>
+                {cve ? (
+                    <>
+                        <DrawerSection title="Vulnerability" icon="report">
+                            <DrawerFields items={[
+                                { label: 'Severity', value: <SeverityBadge severity={cve.severity} /> },
+                                { label: 'CVSS score', value: cve.cvss_score != null ? <CvssScore score={cve.cvss_score} /> : null },
+                                { label: 'Published', value: cve.published && <DateWithTooltip date={cve.published} includeTime={false} type="created" /> },
+                                { label: 'Fetched', value: cve.fetched_at && <DateWithTooltip date={cve.fetched_at} includeTime={true} type="created" /> },
+                            ]} />
+                        </DrawerSection>
+                        <DrawerSection title="Information" icon="notes">
+                            <p className="wt-drawer-text">
+                                {cve.description || <span className="text-muted fst-italic">No information</span>}
+                            </p>
+                        </DrawerSection>
+                        {this.renderReferences(cve.references)}
+                    </>
+                ) : (
+                    <DrawerSection title="Vulnerability" icon="report">
+                        <p className="wt-drawer-text text-muted fst-italic">
+                            CVE details not loaded - switch to the "All CVEs" tab to load them.
+                        </p>
+                    </DrawerSection>
+                )}
+            </DetailDrawer>
         );
     };
 
@@ -255,7 +262,8 @@ class CVEVulnerabilities extends Component {
 
         return (
             <Fragment>
-                <h4 className="mb-3">CVE Vulnerabilities</h4>
+                <span ref={this.anchorRef} className="wt-scroll-anchor" aria-hidden="true" />
+                <h4 className="mb-3 wt-panel-heading">CVE Vulnerabilities</h4>
 
                 <ul className="nav nav-tabs mb-3">
                     <li className="nav-item">
@@ -334,6 +342,10 @@ class CVEVulnerabilities extends Component {
                                                             return (
                                                                 <tr
                                                                     key={hit.id}
+                                                                    {...rowOpenProps(
+                                                                        () => this.openDetailModal(hit),
+                                                                        this.state.showDetailModal && this.state.selectedHit?.id === hit.id
+                                                                    )}
                                                                 >
                                                                     <td className="align-middle fw-semibold">
                                                                         {hit.rule_name || '-'}
@@ -395,7 +407,8 @@ class CVEVulnerabilities extends Component {
                 {activeTab === 'all' && (
                     <TableManager
                         data={cves}
-                        filterConfig={FILTER_CONFIG}
+                        filterConfig={withFilterDefaults(FILTER_CONFIG, this.requestedFilters)}
+                        revealFilters={!!this.requestedFilters}
                         searchFields={['cve_id', 'description']}
                         dateFields={['published']}
                         defaultSort="published"
@@ -444,14 +457,16 @@ class CVEVulnerabilities extends Component {
                                                 </thead>
                                                 <tbody>
                                                     {paginatedData.length === 0 ? (
-                                                        <tr>
-                                                            <td colSpan={99} className="text-center text-muted py-4">
-                                                                No results found
-                                                            </td>
-                                                        </tr>
+                                                        <EmptyRow colSpan={99} />
                                                     ) : (
                                                         paginatedData.map(cve => (
-                                                            <tr key={cve.id}>
+                                                            <tr
+                                                                key={cve.id}
+                                                                {...rowOpenProps(
+                                                                    () => this.openCveDetail(cve),
+                                                                    this.state.showDetailModal && this.state.selectedCve?.id === cve.id
+                                                                )}
+                                                            >
                                                                 <td className="align-middle">
                                                                     <a
                                                                         href={getCveUrl(cve.cve_id)}
@@ -466,11 +481,7 @@ class CVEVulnerabilities extends Component {
                                                                     {this.renderSeverityBadge(cve.severity)}
                                                                 </td>
                                                                 <td className="text-center align-middle">
-                                                                    {cve.cvss_score != null ? (
-                                                                        <span className="fw-semibold">{cve.cvss_score}</span>
-                                                                    ) : (
-                                                                        <span className="text-muted">-</span>
-                                                                    )}
+                                                                    <CvssScore score={cve.cvss_score} />
                                                                 </td>
                                                                 <td className="align-middle" style={{ maxWidth: '380px' }}>
                                                                     {cve.description && cve.description.length > 50 ? (

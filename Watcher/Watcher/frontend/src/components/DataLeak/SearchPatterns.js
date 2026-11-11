@@ -9,6 +9,7 @@ import { DATALEAK_KEYWORD_BULK } from '../../actions/DataLeak';
 import TableManager from '../common/TableManager';
 import DateWithTooltip from '../common/DateWithTooltip';
 import { TimelineModal, LastEventCell, LastEventHeader } from '../Timeline/TimelineModal';
+import { LoadingRows, EmptyRow } from '../common/TableStates';
 
 // Regex patterns organized by theme
 const REGEX_PATTERNS = {
@@ -622,16 +623,7 @@ export class KeyWords extends Component {
     };
 
     renderLoadingState = () => (
-        <tr>
-            <td colSpan="5" className="text-center py-5">
-                <div className="d-flex flex-column align-items-center">
-                    <div className="spinner-border text-primary mb-3" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p className="text-muted mb-0">Loading data...</p>
-                </div>
-            </td>
-        </tr>
+        <LoadingRows colSpan={5} />
     );
 
     render() {
@@ -645,7 +637,7 @@ export class KeyWords extends Component {
                 <div className="row">
                     <div className="col-lg-12">
                         <div className="d-flex justify-content-between align-items-center" style={{marginBottom: 12}}>
-                            <h4>Search Patterns</h4>
+                            <h4 className="wt-panel-heading">Search Patterns</h4>
                             <div>
                                 <button className="btn btn-success" onClick={() => this.displayAddModal()}>
                                     <i className="material-icons me-1 align-middle" style={{fontSize: 23}}>&#xE147;</i>
@@ -710,11 +702,7 @@ export class KeyWords extends Component {
                                                 {this.state.isLoading ? (
                                                     this.renderLoadingState()
                                                 ) : paginatedData.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan="6" className="text-center text-muted py-4">
-                                                            No results found
-                                                        </td>
-                                                    </tr>
+                                                    <EmptyRow colSpan={6} />
                                                 ) : (
                                                     paginatedData.map(keyword => (
                                                         <tr key={keyword.id}>

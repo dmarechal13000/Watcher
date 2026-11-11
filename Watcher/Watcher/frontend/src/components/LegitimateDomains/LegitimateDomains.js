@@ -35,6 +35,7 @@ import {
     exportToMISP,
     getLegitimateDomainStatistics
 } from "../../actions/LegitimateDomain";
+import { LoadingRows, EmptyRow } from '../common/TableStates';
 
 const INIT_DOMAIN = {
     domain_name: '',
@@ -781,16 +782,7 @@ class LegitimateDomains extends Component {
     };
 
     renderLoadingState = () => (
-        <tr>
-            <td colSpan="11" className="text-center py-5">
-                <div className="d-flex flex-column align-items-center">
-                    <div className="spinner-border text-primary mb-3" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p className="text-muted mb-0">Loading data...</p>
-                </div>
-            </td>
-        </tr>
+        <LoadingRows colSpan={11} />
     );
 
     render() {
@@ -810,7 +802,7 @@ class LegitimateDomains extends Component {
         return (
             <Fragment>
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h4>Legitimate Domains</h4>
+                    <h4 className="wt-panel-heading">Legitimate Domains</h4>
                     {canAdd && (
                         <button className="btn btn-success" onClick={this.displayAddModal}>
                             <i className="material-icons me-1" style={{ verticalAlign: 'middle', fontSize: '18px' }}>add_circle</i>
@@ -917,11 +909,7 @@ class LegitimateDomains extends Component {
                                                 {this.state.isLoading ? (
                                                     this.renderLoadingState()
                                                 ) : paginatedData.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={canManage ? "12" : isAuthenticated ? "10" : "7"} className="text-center text-muted py-4">
-                                                            No results found
-                                                        </td>
-                                                    </tr>
+                                                    <EmptyRow colSpan={canManage ? "12" : isAuthenticated ? "10" : "7"} />
                                                 ) : (
                                                     paginatedData.map(domain => (
                                                         <tr key={domain.id}>
