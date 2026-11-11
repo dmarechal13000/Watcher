@@ -25,6 +25,85 @@ const AutoWidthGrid = WidthProvider(GridLayout);
 const DRAG_HANDLE = 'pg-drag-handle';
 
 
+// Toolbar dropdown listing every panel with a checkbox.
+const PanelsMenu = ({ panels, activePanels, onToggle, onShowAll }) => {
+    const [open, setOpen] = React.useState(false);
+    const rootRef = React.useRef(null);
+    const entries = Object.entries(panels);
+    const visible = entries.filter(([key]) => activePanels.has(key)).length;
+
+    React.useEffect(() => {
+        if (!open) return undefined;
+        const onDown = e => { if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false); };
+        const onKey = e => { if (e.key === 'Escape') setOpen(false); };
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [open]);
+
+    return (
+        <div className="wt-panels-menu" ref={rootRef}>
+            <button
+                type="button"
+                className={`btn ${open ? 'btn-primary wt-btn-soft' : 'btn-secondary wt-btn-ghost'} d-inline-flex align-items-center`}
+                onClick={() => setOpen(o => !o)}
+                aria-haspopup="true"
+                aria-expanded={open}
+            >
+                <i className="material-icons" aria-hidden="true">view_quilt</i>
+                <span>Panels</span>
+                <span className="wt-panels-count">{visible}/{entries.length}</span>
+                <i className="material-icons wt-panels-caret" aria-hidden="true">expand_more</i>
+            </button>
+            {open && (
+                <div className="dropdown-menu show wt-panels-dropdown" role="menu">
+                    <div className="wt-panels-dropdown-head">
+                        <span>Visible panels</span>
+                        <button
+                            type="button"
+                            className="btn btn-link btn-sm p-0"
+                            onClick={onShowAll}
+                            disabled={visible === entries.length}
+                        >
+                            Show all
+                        </button>
+                    </div>
+                    {entries.map(([key, { label, icon }]) => {
+                        const isActive = activePanels.has(key);
+                        return (
+                            <button
+                                key={key}
+                                type="button"
+                                role="menuitemcheckbox"
+                                aria-checked={isActive}
+                                className={`dropdown-item wt-panels-item ${isActive ? 'is-active' : ''}`}
+                                onClick={() => onToggle(key)}
+                                title={isActive ? `Hide ${label}` : `Show ${label}`}
+                            >
+                                <span className="wt-panels-check" aria-hidden="true">
+                                    <i className="material-icons">check</i>
+                                </span>
+                                {icon && <i className="material-icons wt-panels-icon" aria-hidden="true">{icon}</i>}
+                                <span>{label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+PanelsMenu.propTypes = {
+    panels:       PropTypes.object.isRequired,
+    activePanels: PropTypes.instanceOf(Set).isRequired,
+    onToggle:     PropTypes.func.isRequired,
+    onShowAll:    PropTypes.func.isRequired,
+};
+
 class PanelGrid extends Component {
     static propTypes = {
         panels:          PropTypes.objectOf(PropTypes.shape({
@@ -158,6 +237,16 @@ class PanelGrid extends Component {
         }
     }
 
+
+    showAllPanels = () => {
+        const next = new Set(Object.keys(this.props.panels));
+        const missing = [...next].filter(key => !this.state.layout.find(l => l.i === key));
+        const added = missing.map(key => ({
+            ...(this.props.defaultLayout.find(d => d.i === key) || { i: key, x: 0, y: 999, w: 6, h: 8, minW: 3, minH: 4 }),
+        }));
+        this.setState(prev => ({ activePanels: next, layout: [...prev.layout, ...added] }));
+        this._lsWrite('active', [...next]);
+    };
 
     togglePanel = (key) => {
         const next = new Set(this.state.activePanels);
@@ -310,7 +399,7 @@ class PanelGrid extends Component {
                     </div>
                     <div className="card-body" style={{ fontSize: '0.93rem', lineHeight: 1.7 }}>
                         <ul className="mb-0 ps-3">
-                            <li><strong>Show / hide a panel</strong> - click its button in the toolbar (blue = visible, grey = hidden)</li>
+                            <li><strong>Show / hide a panel</strong> - open the <strong>Panels</strong> menu in the toolbar and tick or untick it, or use the <i className="material-icons align-middle" style={{ fontSize: '0.9rem' }}>close</i> button in its header</li>
                             <li><strong>Move a panel</strong> - drag the <i className="material-icons align-middle" style={{ fontSize: '0.9rem' }}>drag_indicator</i> grip in the panel header</li>
                             <li><strong>Resize a panel</strong> - drag the resize handle at the bottom-right corner</li>
                             <li><strong>Minimize a panel</strong> - click the <i className="material-icons align-middle" style={{ fontSize: '0.9rem' }}>remove</i> button to collapse it to its header</li>
@@ -344,29 +433,20 @@ class PanelGrid extends Component {
         }
 
         return (
-            <div className="d-flex justify-content-start mb-3 mt-3 flex-wrap" style={{ gap: '10px', padding: '0 8px' }}>
-                {Object.entries(panels).map(([key, { label, icon }]) => {
-                    const isActive = activePanels.has(key);
-                    return (
-                        <button
-                            key={key}
-                            type="button"
-                            className={`btn d-inline-flex align-items-center ${isActive ? 'btn-primary' : 'btn-secondary'}`}
-                            onClick={() => this.togglePanel(key)}
-                            title={isActive ? `Hide ${label}` : `Show ${label}`}
-                        >
-                            {icon && <i className="material-icons me-1 align-middle" style={{ fontSize: 20 }}>{icon}</i>}
-                            <span className="align-middle">{label}</span>
-                        </button>
-                    );
-                })}
+            <div className="wt-panel-toolbar">
+                <PanelsMenu
+                    panels={panels}
+                    activePanels={activePanels}
+                    onToggle={this.togglePanel}
+                    onShowAll={this.showAllPanels}
+                />
 
-                <div className="ms-auto d-flex align-items-center" style={{ gap: '8px' }}>
+                <div className="ms-auto d-flex align-items-center flex-wrap" style={{ gap: '8px' }}>
                     {toolbarExtra}
 
                     <button
                         type="button"
-                        className="btn btn-secondary d-inline-flex align-items-center"
+                        className="btn btn-secondary wt-btn-ghost d-inline-flex align-items-center"
                         onClick={this.resetLayout}
                         title={resetLabel}
                     >
@@ -376,7 +456,7 @@ class PanelGrid extends Component {
 
                     <button
                         type="button"
-                        className="btn btn-secondary d-inline-flex align-items-center"
+                        className="btn btn-secondary wt-btn-ghost d-inline-flex align-items-center"
                         onClick={() => this.setState({ showHelp: true })}
                         title="How to use panels"
                     >
@@ -392,7 +472,7 @@ class PanelGrid extends Component {
         const { label, icon, tooltip, children } = panelDef;
         const isMinimized = this.state.minimizedPanels.has(key);
         return (
-            <div key={key} style={{ overflow: 'hidden', borderRadius: 6 }}>
+            <div key={key} style={{ overflow: 'hidden', borderRadius: 'var(--wt-radius-lg)' }}>
                 <div className="card h-100 shadow-sm" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <div
                         className={`${DRAG_HANDLE} card-header d-flex align-items-center justify-content-between py-2 px-3`}
@@ -400,7 +480,7 @@ class PanelGrid extends Component {
                     >
                         <span className="d-flex align-items-center gap-2 fw-semibold" style={{ fontSize: '0.83rem' }}>
                             <i className="material-icons text-muted" style={{ fontSize: '1.05rem', lineHeight: 1 }}>drag_indicator</i>
-                            {icon && <i className="material-icons" style={{ fontSize: '1rem', lineHeight: 1 }}>{icon}</i>}
+                            {icon && <span className="wt-icon-chip"><i className="material-icons">{icon}</i></span>}
                             {label}
                             {tooltip && (
                                 <i

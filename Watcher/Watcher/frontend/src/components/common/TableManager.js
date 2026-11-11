@@ -4,11 +4,13 @@ import preferencesService from '../../services/preferencesService';
 import BulkActionBar from './BulkActionBar';
 
 export const renderSortIcons = (field, sortBy, sortDirection) => {
-    const active = sortBy === field;
-    const cA = '#375a7f', cI = '#bbb';
-    const up = <span style={{ display: 'block', color: active && sortDirection === 'asc' ? cA : cI, margin: 0, padding: 0 }}>▲</span>;
-    const down = <span style={{ display: 'block', color: active && sortDirection === 'desc' ? cA : cI, margin: 0, padding: 0 }}>▼</span>;
-    return <span style={{ marginLeft: 6, fontSize: 13, verticalAlign: 'middle', display: 'inline-block', lineHeight: 0.8 }}>{up}{down}</span>;
+    const state = sortBy === field ? sortDirection : null;
+    const icon = state === 'asc' ? 'arrow_upward' : state === 'desc' ? 'arrow_downward' : 'unfold_more';
+    return (
+        <span className={`wt-sort ${state ? 'wt-sort-active' : ''}`} aria-hidden="true">
+            <i className="material-icons">{icon}</i>
+        </span>
+    );
 };
 
 const getDateRangeBounds = (range, customStart = null, customEnd = null) => {
@@ -93,7 +95,7 @@ class TableManager extends Component {
             itemsPerPage: savedItemsPerPage,
             filters: {},
             sortBy: props.defaultSort || 'created_at',
-            sortDirection: 'desc',
+            sortDirection: props.defaultSortDirection || 'desc',
             showFullCommentId: null,
             dateRange: 'all',
             customStartDate: '',
@@ -128,6 +130,10 @@ class TableManager extends Component {
         });
 
         this.loadSavedFilters();
+
+        // A filter requested from a Statistics tab: show the filter panel so the user sees why
+        // the table is narrowed (not saved as the user's filter-visibility preference).
+        if (this.props.revealFilters) this.setState({ showFilters: true });
 
         this.setState({ filters: initialFilters }, () => {
             this.applyFilters();
@@ -187,11 +193,14 @@ class TableManager extends Component {
             if (globalFiltersChanged) {
                 this.setState({ currentPage: 1 });
             }
-            requestAnimationFrame(() => {
-                const best = this._computeAdaptiveItemsPerPage();
-                this.applyAutofit(best);
-            });
+            requestAnimationFrame(this.fitToPanel);
         }
+
+        // Auto-fit refinement: keep adjusting while a fit pass is open (see _refineAutofit)
+        if (prevState.filteredData !== this.state.filteredData && this.state.autofitEnabled) {
+            this._openFitPass();
+        }
+        if (this._fitPass) this._queueRefine();
 
         if (prevState.itemsPerPage !== this.state.itemsPerPage ||
             prevState.currentPage !== this.state.currentPage ||
@@ -371,16 +380,86 @@ class TableManager extends Component {
         if (available <= 0) return 1;
 
         const panelEl = this._adaptivePanelEl;
-        const firstRow = panelEl.querySelector('tbody tr');
-        const rowHeight = firstRow ? firstRow.getBoundingClientRect().height : 50;
+        // Tallest rendered row: rows whose content wraps would otherwise push the last one
+        // below the fold when the estimate comes from a shorter first row.
+        const rows = [...panelEl.querySelectorAll('tbody tr')];
+        const rowHeight = rows.length
+            ? Math.max(...rows.map(r => r.getBoundingClientRect().height))
+            : 50;
 
         return Math.max(1, Math.floor(available / rowHeight));
     };
 
+    // First estimate from the tallest row, then refine against the rows actually rendered.
+    fitToPanel = () => {
+        if (!this.mounted) return;
+        this._openFitPass();
+        this.applyAutofit(this._computeAdaptiveItemsPerPage());
+        this._queueRefine();
+    };
+
+    _openFitPass = () => {
+        // Only panels with a fixed height (dashboard grid): elsewhere the card grows with its
+        // rows, so "room for one more row" would never stop being true.
+        const panelEl = this._adaptivePanelEl;
+        if (!panelEl || !panelEl.closest('.react-grid-item')) return;
+        this._fitPass = { shrunk: false, steps: 0 };
+    };
+
+    _queueRefine = () => {
+        if (this._refineQueued) return;
+        this._refineQueued = true;
+        requestAnimationFrame(() => {
+            this._refineQueued = false;
+            this._refineAutofit();
+        });
+    };
+
+    // Rows can wrap to different heights (long names...), so the estimate is either too
+    // pessimistic (empty space under the table) or too optimistic (last row cut). Measure the
+    // rendered rows: drop one while they overflow, add one while a whole average row still fits.
+    _refineAutofit = () => {
+        const pass = this._fitPass;
+        if (!pass || !this.mounted || !this.state.autofitEnabled) return;
+        const panelEl = this._adaptivePanelEl;
+        if (!panelEl) return;
+
+        const rows = [...panelEl.querySelectorAll('tbody > tr')];
+        // Still loading: keep the pass open, the next update retries
+        if (!rows.length || rows.some(r => r.classList.contains('wt-skeleton-row'))) return;
+        if (rows.some(r => r.classList.contains('wt-empty-row'))) { this._fitPass = null; return; }
+
+        const available = this._computeAvailableTableSpace();
+        if (available === null) return;
+
+        pass.steps += 1;
+        if (pass.steps > 40) { this._fitPass = null; return; }
+
+        const used = rows.reduce((sum, r) => sum + r.getBoundingClientRect().height, 0);
+        const average = used / rows.length;
+        const n = this.state.itemsPerPage;
+        const total = (this.state.filteredData || []).length;
+        // A horizontal scrollbar (table wider than the panel) eats into the height as well
+        const scroller = rows[0].closest('table')?.parentElement;
+        const scrollbar = scroller ? scroller.offsetHeight - scroller.clientHeight : 0;
+        const overflowing = scroller ? scroller.scrollHeight - scroller.clientHeight > 1 : false;
+        const room = available - scrollbar;
+
+        if ((used > room + 1 || overflowing) && n > 1) {
+            pass.shrunk = true;
+            this.setState({ itemsPerPage: n - 1 });
+            return;
+        }
+        if (!pass.shrunk && rows.length >= n && n < total && room - used >= average) {
+            this.setState({ itemsPerPage: n + 1 });
+            return;
+        }
+        this._fitPass = null;
+    };
+
     handlePanelResize = () => {
         this.updateContainerHeight();
-        const best = this._computeAdaptiveItemsPerPage();
-        this.applyAutofit(best);
+        this.fitToPanel();
         // The table area's max-height tracks the panel's live size (see
         // getTableContainerStyle). In manual mode applyAutofit is a no-op, so force
         // a re-render here to re-measure and pick up the new panel size either way.
@@ -402,8 +481,7 @@ class TableManager extends Component {
 
             requestAnimationFrame(() => {
                 if (!this.mounted) return;
-                const best = this._computeAdaptiveItemsPerPage();
-                this.applyAutofit(best);
+                this.fitToPanel();
             });
         }
 
@@ -782,9 +860,9 @@ class TableManager extends Component {
         const savedFilterNames = Object.keys(savedFilters);
     
         return (
-            <div className="d-flex justify-content-start mb-3" style={{ gap: '10px' }}>
+            <div className="wt-table-toolbar">
                 <button 
-                    className="btn btn-secondary"
+                    className="btn btn-secondary wt-btn-ghost"
                     onClick={this.resetToDefault}
                     title="Reset all filters and sorting to default state"
                 >
@@ -794,18 +872,17 @@ class TableManager extends Component {
     
                 <div className="btn-group">
                     <button 
-                        className={`btn btn-secondary ${savedFilterNames.length > 0 ? 'dropdown-toggle' : ''}`}
+                        className={`btn btn-secondary wt-btn-ghost ${savedFilterNames.length > 0 ? 'dropdown-toggle' : ''}`}
                         type="button" 
                         data-toggle={savedFilterNames.length > 0 ? 'dropdown' : undefined}
                         aria-haspopup={savedFilterNames.length > 0 ? true : undefined}
                         aria-expanded={savedFilterNames.length > 0 ? false : undefined}
                         disabled={savedFilterNames.length === 0}
-                        style={{ borderRadius: '0.25rem' }}
                     >
                         <i className="material-icons me-1 align-middle" style={{ fontSize: 20 }}>folder_open</i>
                         <span className="align-middle">Saved Filters ({savedFilterNames.length})</span>
                     </button>
-                    <div className="dropdown-menu shadow" style={{ minWidth: '320px', borderRadius: '0.25rem' }}>
+                    <div className="dropdown-menu shadow" style={{ minWidth: '320px' }}>
                         {savedFilterNames.length === 0 ? (
                             <span className="dropdown-item-text text-muted text-center py-3" style={{ fontSize: '15px' }}>
                                 No saved filters
@@ -849,8 +926,9 @@ class TableManager extends Component {
                 </div>
     
                 <button 
-                    className="btn btn-primary"
+                    className={`btn ${showFilters ? 'btn-primary wt-btn-soft' : 'btn-secondary wt-btn-ghost'}`}
                     onClick={this.toggleFilters}
+                    aria-pressed={showFilters}
                     title={showFilters ? 'Hide filters' : 'Show filters'}
                 >
                     <i className="material-icons me-1 align-middle" style={{ fontSize: 20 }}>
@@ -860,7 +938,7 @@ class TableManager extends Component {
                 </button>
     
                 <button 
-                    className="btn btn-success"
+                    className="btn btn-secondary wt-btn-ghost"
                     onClick={() => this.setState({ showSaveModal: true })}
                     title="Save current filter configuration"
                 >
@@ -938,19 +1016,22 @@ class TableManager extends Component {
         const hasDateFilter = enableDateFilter && dateFields.length > 0;
         
         return (
-            <div className="card mb-3 shadow-sm border-0">
-                <div className="card-body py-2 mb-2">
-                    <div className="row align-items-center">
+            <div className="card wt-filter-panel mb-3">
+                <div className="card-body">
+                    <div className="row g-3 align-items-end">
                         {filterConfig.map((filter) => (
                             <div key={filter.key} className={`col-12 col-md-${filter.width || 2}`}>
                                 <Form.Label>{filter.label}</Form.Label>
                                 {filter.type === 'search' ? (
-                                    <Form.Control
-                                        type="text"
-                                        placeholder={filter.placeholder}
-                                        value={filters[filter.key] || ''}
-                                        onChange={e => this.handleFilterChange(filter.key, e.target.value)}
-                                    />
+                                    <div className="wt-search">
+                                        <i className="material-icons" aria-hidden="true">search</i>
+                                        <Form.Control
+                                            type="text"
+                                            placeholder={filter.placeholder}
+                                            value={filters[filter.key] || ''}
+                                            onChange={e => this.handleFilterChange(filter.key, e.target.value)}
+                                        />
+                                    </div>
                                 ) : (
                                     <Form.Control
                                         as="select"
@@ -958,6 +1039,10 @@ class TableManager extends Component {
                                         onChange={e => this.handleFilterChange(filter.key, e.target.value)}
                                     >
                                         <option value="">All</option>
+                                        {/* Keep an active value visible even before its options are loaded */}
+                                        {filters[filter.key] && !filter.options.some(o => String(o.value) === String(filters[filter.key])) && (
+                                            <option value={filters[filter.key]}>{filters[filter.key]}</option>
+                                        )}
                                         {filter.options.map(option => (
                                             <option key={option.value} value={option.value}>
                                                 {option.label}
@@ -973,10 +1058,11 @@ class TableManager extends Component {
                         <div className={`col-12 col-md-${clearButtonWidth} text-md-end`}>
                             <Form.Label>&nbsp;</Form.Label>
                             <Button
-                                variant="outline-primary"
-                                className="w-100 d-block"
+                                variant="secondary"
+                                className="w-100 d-flex align-items-center justify-content-center gap-1 wt-btn-ghost"
                                 onClick={this.clearFilters}
                             >
+                                <i className="material-icons" style={{ fontSize: 18 }} aria-hidden="true">clear_all</i>
                                 Clear all filters
                             </Button>
                         </div>
@@ -1023,7 +1109,7 @@ class TableManager extends Component {
         };
     
         return (
-            <nav ref={this.paginationRef} className="mt-3">
+            <nav ref={this.paginationRef} className="wt-pagination mt-3" aria-label="Table pagination">
                 <ul className="pagination justify-content-center">
                     <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
                         <button 
@@ -1031,7 +1117,8 @@ class TableManager extends Component {
                             onClick={() => this.handlePageChange(currentPage - 1)} 
                             disabled={currentPage === 1}
                         >
-                            Previous
+                            <i className="material-icons" aria-hidden="true">chevron_left</i>
+                            <span>Previous</span>
                         </button>
                     </li>
                     {getPages().map((page, idx) =>
@@ -1056,7 +1143,8 @@ class TableManager extends Component {
                             onClick={() => this.handlePageChange(currentPage + 1)} 
                             disabled={currentPage === totalPages}
                         >
-                            Next
+                            <span>Next</span>
+                            <i className="material-icons" aria-hidden="true">chevron_right</i>
                         </button>
                     </li>
                 </ul>
@@ -1069,9 +1157,9 @@ class TableManager extends Component {
         const dataLength = filteredData?.length || 0;
         
         return (
-            <div ref={this.containerRef} className="d-flex justify-content-between align-items-center mb-2">
+            <div ref={this.containerRef} className="wt-table-meta">
                 <small className="text-muted">
-                    Showing {dataLength === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, dataLength)} of {dataLength} entries
+                    Showing <strong>{dataLength === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong>{Math.min(currentPage * itemsPerPage, dataLength)}</strong> of <strong>{dataLength}</strong> entries
                 </small>
                 <div className="d-flex align-items-center">
                     <small className="text-muted me-2">Items per page:</small>
@@ -1082,10 +1170,7 @@ class TableManager extends Component {
                             const val = e.target.value;
                             if (val === 'auto') {
                                 this.saveAutofitEnabledToStorage(true);
-                                this.setState({ autofitEnabled: true, manualItemsPerPage: null }, () => {
-                                    const best = this._computeAdaptiveItemsPerPage();
-                                    this.applyAutofit(best);
-                                });
+                                this.setState({ autofitEnabled: true, manualItemsPerPage: null }, this.fitToPanel);
                             } else {
                                 this.handleItemsPerPageChange(Number(val), true);
                             }
@@ -1111,8 +1196,11 @@ class TableManager extends Component {
         // scroll internally, instead of clipping extra rows with no way to reach them.
         // Floor it to one row so a heavily shrunk panel stays scrollable rather than
         // letting the table overflow past the panel's own clipped boundary.
+        // `available` is the room left for the rows (thead already subtracted); the scroll area
+        // also holds the header, so add it back or the last auto-fitted row ends up cut off.
+        const theadHeight = this.theadRef?.current ? this.theadRef.current.getBoundingClientRect().height : 0;
         const maxHeight = available !== null
-            ? `${Math.max(available, TableManager.TABLE_ROW_HEIGHT_PX)}px`
+            ? `${Math.max(available + theadHeight, TableManager.TABLE_ROW_HEIGHT_PX)}px`
             : undefined;
 
         if (paginatedData.length === 0) {
