@@ -5,6 +5,7 @@ import { Modal, Form, Button, Badge, Spinner, Alert } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import TableManager from '../common/TableManager';
 import { getConnectors, updateConnector, revealConnector, testConnector, resetConnectorField, setDefaultLlm } from '../../actions/Connectors';
+import StatCard from '../common/StatCard';
 
 const LOGO_BASE = '/static/frontend/images/connectors/';
 
@@ -21,37 +22,6 @@ const HEALTH_CFG = {
 };
 
 const CATEGORY_ORDER = ['Notifications', 'Incident Response', 'Threat Intelligence', 'Certificate Monitoring', 'Domain Monitoring', 'Search', 'Authentication', 'Database', 'Other'];
-
-// KpiCard
-function KpiCard({ title, value, icon, variant }) {
-    return (
-        <div className={`card border-0 shadow-sm h-100 bg-${variant}`}>
-            <div className="card-body d-flex align-items-center p-3">
-                <div
-                    className="d-flex align-items-center justify-content-center bg-white rounded-circle me-3 flex-shrink-0"
-                    style={{ width: 48, height: 48, minWidth: 48 }}
-                >
-                    <i
-                        className={variant === 'secondary' ? 'material-icons' : `material-icons text-${variant}`}
-                        style={variant === 'secondary' ? { fontSize: 26, color: '#6c757d' } : { fontSize: 26 }}
-                    >
-                        {icon}
-                    </i>
-                </div>
-                <div className="flex-fill" style={{ minWidth: 0 }}>
-                    <div className="text-white-50 text-uppercase fw-bold"
-                         style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>
-                        {title}
-                    </div>
-                    <div className="text-white fw-bold"
-                         style={{ fontSize: 'clamp(1.1rem, 2.5vw, 1.7rem)', lineHeight: 1.15 }}>
-                        {value}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 // StatusBadge
 function StatusBadge({ status }) {
@@ -324,80 +294,74 @@ class ConnectorCard extends Component {
         const isAI = ['openai', 'anthropic', 'gemini', 'ollama', 'generic_llm_provider'].includes(connector.id) ||
                      (connector.category && connector.category.includes('Artificial Intelligence'));
 
+        const health = connector.health?.status || 'unknown';
+
         return (
-            <div className="card shadow-sm h-100 d-flex flex-column text-center">
-                <div className="card-body flex-grow-1 d-flex flex-column align-items-center justify-content-center py-4 px-3">
-                    <div className="mb-3 d-flex align-items-center justify-content-center"
-                         style={{ height: 72, minWidth: 72, maxWidth: 144 }}>
-                        <ConnectorLogo connector={connector} size={72} />
+            <div className={`card wt-conn-card wt-conn-${connector.status} wt-conn-health-${health}`}>
+                <div className="card-body">
+                    <div className="wt-conn-head">
+                        <span className="wt-conn-logo">
+                            <ConnectorLogo connector={connector} size={30} />
+                            <span className="wt-conn-health-dot" title={HEALTH_CFG[health]?.label} />
+                        </span>
+                        <div className="wt-conn-title">
+                            <strong>{connector.name}</strong>
+                            <span>{connector.category} · v{connector.version}</span>
+                        </div>
+                        {connector.readonly && (
+                            <i className="material-icons wt-conn-lock" title="Read-only: configured in settings.py">lock</i>
+                        )}
                     </div>
-                    <div className="fw-bold mb-1" style={{ fontSize: 15 }}>{connector.name}</div>
-                    <div className="d-flex align-items-center gap-2 flex-wrap justify-content-center">
+
+                    {connector.description && <p className="wt-conn-desc" title={connector.description}>{connector.description}</p>}
+
+                    <div className="wt-conn-badges">
                         <StatusBadge status={connector.status} />
                         <HealthBadge health={connector.health} />
                         {connector.readonly && <Badge bg="warning" text="dark">Read-only</Badge>}
                         {connector.is_default_llm && (
-                            <Badge bg="primary" className="d-inline-flex align-items-center gap-0.5">
-                                <i className="material-icons me-1" style={{ fontSize: 13, verticalAlign: 'text-bottom' }}>
-                                    star
-                                </i>
-                                Default
+                            <Badge bg="primary" className="wt-conn-default">
+                                <i className="material-icons" aria-hidden="true">star</i>
+                                Default LLM
                             </Badge>
                         )}
                     </div>
 
                     {isAI && (
-                        <div className="mt-3 w-100 p-2 d-flex align-items-center justify-content-center text-light">
-                            <div className="form-check form-switch mb-0 d-flex align-items-center justify-content-center gap-2" style={{ paddingLeft: 0 }}>
-                                <input
-                                    className="form-check-input mt-0 ms-0"
-                                    type="checkbox"
-                                    id={`default_llm_${connector.id}`}
-                                    checked={connector.is_default_llm || false}
-                                    onChange={(e) => onSetDefaultLLM(connector.id, e.target.checked)}
-                                    style={{ cursor: 'pointer', margin: 0 }}
-                                />
-                                <label className="form-check-label text-light fw-bold mb-0" htmlFor={`default_llm_${connector.id}`} style={{ fontSize: 11, cursor: 'pointer' }}>
-                                    Set as Default LLM
-                                </label>
-                            </div>
+                        <div className="form-check form-switch wt-conn-llm">
+                            <input
+                                className="form-check-input"
+                                type="checkbox"
+                                role="switch"
+                                id={`default_llm_${connector.id}`}
+                                checked={connector.is_default_llm || false}
+                                onChange={(e) => onSetDefaultLLM(connector.id, e.target.checked)}
+                            />
+                            <label className="form-check-label" htmlFor={`default_llm_${connector.id}`}>
+                                Set as Default LLM
+                            </label>
                         </div>
                     )}
 
                     {testResult && (
-                        <div className={`mt-3 d-flex align-items-start justify-content-between gap-1 p-2 rounded border border-${testResult.success ? 'success' : 'danger'} w-100`}
-                             style={{ fontSize: 12, textAlign: 'left',
-                                      background: testResult.success
-                                          ? 'rgba(28,200,138,0.07)'
-                                          : 'rgba(231,74,59,0.07)' }}>
-                            <span style={{ color: `var(--bs-${testResult.success ? 'success' : 'danger'})` }}>
-                                <i className="material-icons me-1"
-                                   style={{ fontSize: 13, verticalAlign: 'text-bottom' }}>
-                                    {testResult.success ? 'check_circle' : 'error'}
-                                </i>
-                                {testResult.message}
-                            </span>
-                            <button type="button" className="btn-close flex-shrink-0"
-                                    style={{ fontSize: '0.5rem' }}
+                        <div className={`wt-conn-test ${testResult.success ? 'is-ok' : 'is-error'}`} role="status">
+                            <i className="material-icons" aria-hidden="true">{testResult.success ? 'check_circle' : 'error'}</i>
+                            <span>{testResult.message}</span>
+                            <button type="button" className="btn-close" aria-label="Dismiss"
                                     onClick={() => this.setState({ testResult: null })} />
                         </div>
                     )}
                 </div>
 
-                <div className="card-footer d-flex gap-2 py-2 px-3">
-                    <button className="btn btn-primary btn-sm flex-fill"
-                            onClick={() => onEditClick(connector)}>
-                        <i className="material-icons me-1"
-                           style={{ fontSize: 14, verticalAlign: 'text-bottom' }}>edit</i>
-                        {connector.readonly ? 'View' : 'Edit'}
+                <div className="wt-conn-actions">
+                    <button type="button" className="btn btn-sm btn-secondary wt-btn-soft" onClick={() => onEditClick(connector)}>
+                        <i className="material-icons" aria-hidden="true">{connector.readonly ? 'visibility' : 'tune'}</i>
+                        {connector.readonly ? 'View' : 'Configure'}
                     </button>
-                    <button className="btn btn-outline-success btn-sm flex-fill"
-                            onClick={this.handleTest} disabled={testing}>
+                    <button type="button" className="btn btn-sm btn-secondary wt-btn-ghost" onClick={this.handleTest} disabled={testing}>
                         {testing
-                            ? <Spinner animation="border" size="sm" className="me-1" />
-                            : <i className="material-icons me-1"
-                                 style={{ fontSize: 14, verticalAlign: 'text-bottom' }}>wifi_tethering</i>
-                        }
+                            ? <Spinner animation="border" size="sm" />
+                            : <i className="material-icons" aria-hidden="true">network_check</i>}
                         {testing ? 'Testing…' : 'Test'}
                     </button>
                 </div>
@@ -510,26 +474,23 @@ class ConnectorsDashboard extends Component {
         }
     };
 
-    toggleGroupByCategory = () => this.setState(prev => ({ groupByCategory: !prev.groupByCategory }));
     toggleHelp = () => this.setState(prev => ({ showHelp: !prev.showHelp }));
 
     renderConnectorsGrid = (data) => {
         if (data.length === 0) {
             return (
-                <div className="text-center py-5 text-muted">
-                    <i className="material-icons" style={{ fontSize: 48, opacity: 0.3 }}>power_off</i>
-                    <p className="mt-2">No connectors match your filters.</p>
+                <div className="wt-empty">
+                    <i className="material-icons" aria-hidden="true">power_off</i>
+                    <p>No connectors match your filters.</p>
                 </div>
             );
         }
 
         if (!this.state.groupByCategory) {
             return (
-                <div className="row g-3 mb-3 row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-5">
+                <div className="wt-conn-grid mb-3">
                     {data.map(c => (
-                        <div className="col" key={c.id}>
-                            <ConnectorCard connector={c} onEditClick={this.openEdit} onTest={this.handleTest} onSetDefaultLLM={this.handleSetDefaultLLM}/>
-                        </div>
+                        <ConnectorCard key={c.id} connector={c} onEditClick={this.openEdit} onTest={this.handleTest} onSetDefaultLLM={this.handleSetDefaultLLM} />
                     ))}
                 </div>
             );
@@ -545,19 +506,17 @@ class ConnectorsDashboard extends Component {
             .concat(Object.keys(byCategory).filter(cat => !CATEGORY_ORDER.includes(cat)));
 
         return sortedCategories.map(category => (
-            <div key={category} className="mb-4">
-                <h6 className="text-uppercase text-muted fw-bold mb-2"
-                    style={{ letterSpacing: '0.08em', fontSize: '0.75rem' }}>
+            <section key={category} className="mb-4">
+                <h2 className="wt-stats-section-title">
                     {category}
-                </h6>
-                <div className="row g-3 mb-1 row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-5">
+                    <span className="wt-conn-count">{byCategory[category].length}</span>
+                </h2>
+                <div className="wt-conn-grid">
                     {byCategory[category].map(c => (
-                        <div className="col" key={c.id}>
-                            <ConnectorCard connector={c} onEditClick={this.openEdit} onTest={this.handleTest} onSetDefaultLLM={this.handleSetDefaultLLM} />
-                        </div>
+                        <ConnectorCard key={c.id} connector={c} onEditClick={this.openEdit} onTest={this.handleTest} onSetDefaultLLM={this.handleSetDefaultLLM} />
                     ))}
                 </div>
-            </div>
+            </section>
         ));
     };
 
@@ -568,11 +527,14 @@ class ConnectorsDashboard extends Component {
 
         if (!user || !user.is_superuser) {
             return (
-                <div className="container mt-5 text-center">
-                    <i className="material-icons text-danger" style={{ fontSize: 56 }}>lock</i>
-                    <h4 className="mt-3">Access Restricted</h4>
-                    <p className="text-muted">This page requires superuser privileges.</p>
-                    <Link to="/" className="btn btn-primary">Back to Dashboard</Link>
+                <div className="wt-notfound">
+                    <div className="wt-notfound-icon" aria-hidden="true"><i className="material-icons">lock</i></div>
+                    <div className="wt-eyebrow">Superuser only</div>
+                    <h1>Access restricted</h1>
+                    <p>Connectors hold credentials for external services, so only superusers can see them.</p>
+                    <div className="wt-notfound-actions">
+                        <Link to="/" className="btn btn-primary">Back to Threats Watcher</Link>
+                    </div>
                 </div>
             );
         }
@@ -581,84 +543,63 @@ class ConnectorsDashboard extends Component {
             total:      connectors.length,
             configured: connectors.filter(c => c.status === 'configured').length,
             partial:    connectors.filter(c => c.status === 'partial').length,
-            disabled:   connectors.filter(c => c.status === 'disabled').length,
+            healthy:    connectors.filter(c => c.health?.status === 'healthy').length,
+            unhealthy:  connectors.filter(c => c.health?.status === 'unhealthy').length,
+            untested:   connectors.filter(c => (c.health?.status || 'unknown') === 'unknown').length,
         };
 
         return (
-            <div className="container-fluid py-3 px-3 px-md-4">
-                {/* Page title */}
-                <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                    <h4 className="mb-0 d-flex align-items-center gap-2">
-                        <i className="material-icons" style={{ fontSize: 24 }}>power</i>
-                        Connectors
-                    </h4>
-                    <div className="d-flex gap-2 align-items-center flex-wrap">
-                        <Link to="/profile" className="btn btn-outline-secondary btn-sm">
-                            <i className="material-icons me-1 align-middle"
-                               style={{ fontSize: 16 }}>arrow_back</i>
-                            Profile
-                        </Link>
-                    </div>
+            <div className="wt-connectors">
+                <div className="wt-kpi-strip">
+                    <StatCard title="Connectors" value={stats.total} icon="hub" variant="primary" />
+                    <StatCard title="Configured" value={stats.configured} icon="check_circle" variant="success" />
+                    <StatCard title="Incomplete" value={stats.partial} icon="warning" variant="warning" />
+                    <StatCard title="Unhealthy" value={stats.unhealthy} icon="error" variant="danger"
+                              sub={`${stats.healthy} healthy · ${stats.untested} not tested`} />
                 </div>
 
-                {/* KPI Stats */}
-                <div className="row g-3 mb-4">
-                    <div className="col-6 col-sm-3">
-                        <KpiCard title="Total" value={stats.total} icon="power" variant="primary" />
-                    </div>
-                    <div className="col-6 col-sm-3">
-                        <KpiCard title="Configured" value={stats.configured} icon="check_circle" variant="success" />
-                    </div>
-                    <div className="col-6 col-sm-3">
-                        <KpiCard title="Incomplete" value={stats.partial} icon="warning" variant="warning" />
-                    </div>
-                    <div className="col-6 col-sm-3">
-                        <KpiCard title="Disabled" value={stats.disabled} icon="do_not_disturb" variant="secondary" />
-                    </div>
-                </div>
-
-                {/* Help */}
-                <div className="mb-4">
-                    <div
-                        className="d-flex align-items-center"
-                        onClick={this.toggleHelp}
-                        style={{ cursor: 'pointer' }}
-                    >
-                        <i className="material-icons text-primary me-2">
-                            {this.state.showHelp ? 'expand_less' : 'expand_more'}
-                        </i>
-                        <span className="text-muted">Need help with connectors?</span>
-                    </div>
-
+                <div className={`card wt-help ${this.state.showHelp ? 'is-open' : ''}`}>
+                    <button type="button" className="wt-help-toggle" onClick={this.toggleHelp} aria-expanded={this.state.showHelp}>
+                        <i className="material-icons" aria-hidden="true">help</i>
+                        <span>How connectors work</span>
+                        <i className="material-icons ms-auto" aria-hidden="true">{this.state.showHelp ? 'expand_less' : 'expand_more'}</i>
+                    </button>
                     {this.state.showHelp && (
-                        <div className="mt-3 ps-4 border-start border-primary">
-                            <ul className="mb-0 ps-3 text-muted">
-                                <li>
-                                    The first time a connector's fields are read, they're seeded from your <strong>settings.py</strong> / <strong>.env</strong> values
-                                </li>
-                                <li>
-                                    Click <strong>Edit</strong> on a card to override a value, saving stores it in the database and takes effect
-                                    immediately across the whole app (SMTP, Slack, Citadel, TheHive, MISP, CertStream, SearxNG, CyberWatch...), not just this page's own <strong>Test</strong> button
-                                </li>
-                                <li>
-                                    Once a field has been saved here, even cleared to empty, it stops following <strong>settings.py</strong>/<strong>.env</strong> for good.
-                                    Each field shows a <strong>From .env</strong> or <strong>Manually set</strong> badge, and manually-set fields get a reset
-                                    button to drop the override and resume following <strong>settings.py</strong>/<strong>.env</strong> live
-                                </li>
-                                <li>
-                                    Passwords, tokens and API keys are encrypted before being stored, and shown masked by default, click the eye icon to reveal
-                                </li>
-                                <li>
-                                    <strong>Test</strong> runs a real connectivity check using the values currently saved for that connector, and reports
-                                    success or failure right on the card
-                                </li>
-                                <li>
-                                    Connectors marked <Badge bg="warning" text="dark" style={{ fontSize: 9 }}>Read-only</Badge>{' '} are informational only.
-                                    Their configuration lives exclusively in <strong>settings.py</strong> and can't be changed from this page, for LDAP and
-                                    OIDC/SSO this is because Django builds its authentication backends from <strong>settings.py</strong> at process startup, not per-request
-                                </li>
-                            </ul>
-                        </div>
+                        <ul className="wt-help-list">
+                            <li>
+                                <i className="material-icons" aria-hidden="true">download</i>
+                                <span>The first time a connector's fields are read, they're seeded from your <strong>settings.py</strong> / <strong>.env</strong> values.</span>
+                            </li>
+                            <li>
+                                <i className="material-icons" aria-hidden="true">tune</i>
+                                <span>
+                                    <strong>Configure</strong> overrides a value: it is stored in the database and takes effect immediately across the whole app
+                                    (SMTP, Slack, Citadel, TheHive, MISP, CertStream, SearxNG, CyberWatch...), not only for the <strong>Test</strong> button.
+                                </span>
+                            </li>
+                            <li>
+                                <i className="material-icons" aria-hidden="true">link_off</i>
+                                <span>
+                                    Once saved here, even cleared to empty, a field stops following <strong>settings.py</strong>/<strong>.env</strong>.
+                                    Each field shows <strong>From .env</strong> or <strong>Manually set</strong>; manual fields get a reset button to follow the file again.
+                                </span>
+                            </li>
+                            <li>
+                                <i className="material-icons" aria-hidden="true">lock</i>
+                                <span>Passwords, tokens and API keys are encrypted before being stored and masked by default; the eye icon reveals them.</span>
+                            </li>
+                            <li>
+                                <i className="material-icons" aria-hidden="true">network_check</i>
+                                <span><strong>Test</strong> runs a real connectivity check with the saved values and reports the result on the card.</span>
+                            </li>
+                            <li>
+                                <i className="material-icons" aria-hidden="true">visibility</i>
+                                <span>
+                                    <strong>Read-only</strong> connectors are informational: their configuration lives only in <strong>settings.py</strong>.
+                                    For LDAP and OIDC/SSO, Django builds its authentication backends from it at startup, not per request.
+                                </span>
+                            </li>
+                        </ul>
                     )}
                 </div>
 
@@ -670,9 +611,8 @@ class ConnectorsDashboard extends Component {
                 )}
 
                 {loading && (
-                    <div className="text-center py-5">
-                        <Spinner animation="border" variant="primary" />
-                        <p className="text-muted mt-2 mb-0">Loading connectors…</p>
+                    <div className="wt-conn-grid" aria-busy="true">
+                        {Array.from({ length: 8 }, (_, i) => <div key={i} className="card wt-conn-card wt-conn-skeleton" />)}
                     </div>
                 )}
 
@@ -683,8 +623,9 @@ class ConnectorsDashboard extends Component {
                         searchFields={['name', 'category', 'description']}
                         customFilters={this.customFilters}
                         moduleKey="connectors_dashboard"
-                        itemsPerPage={10}
+                        itemsPerPage={24}
                         defaultSort="name"
+                        defaultSortDirection="asc"
                     >
                         {({ paginatedData, renderFilterControls, renderFilters, renderPagination, renderItemsInfo }) => (
                             <Fragment>
@@ -693,17 +634,15 @@ class ConnectorsDashboard extends Component {
 
                                 {renderItemsInfo()}
 
-                                <div className="mb-2">
-                                    <button
-                                        type="button"
-                                        className={`btn btn-sm ${this.state.groupByCategory ? 'btn-secondary' : 'btn-outline-secondary'}`}
-                                        onClick={this.toggleGroupByCategory}
-                                        title="Group connectors by category"
-                                    >
-                                        <i className="material-icons me-1"
-                                           style={{ fontSize: 14, verticalAlign: 'text-bottom' }}>category</i>
-                                        Group by category
-                                    </button>
+                                <div className="wt-segmented mb-3" role="radiogroup" aria-label="Layout">
+                                    {[{ key: false, label: 'All', icon: 'grid_view' }, { key: true, label: 'By category', icon: 'category' }].map(opt => (
+                                        <button key={String(opt.key)} type="button" role="radio" aria-checked={this.state.groupByCategory === opt.key}
+                                                className={this.state.groupByCategory === opt.key ? 'is-active' : ''}
+                                                onClick={() => this.setState({ groupByCategory: opt.key })}>
+                                            <i className="material-icons" aria-hidden="true">{opt.icon}</i>
+                                            {opt.label}
+                                        </button>
+                                    ))}
                                 </div>
 
                                 {this.renderConnectorsGrid(paginatedData)}

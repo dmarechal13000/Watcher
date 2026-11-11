@@ -6,7 +6,7 @@ import { Container, Row, Col, Card, Badge, Nav, Modal, Button, Form } from "reac
 import GridLayout, { WidthProvider } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import { useTheme } from "../../contexts/ThemeContext";
+import { useTheme, EFFECT_LEVELS } from "../../contexts/ThemeContext";
 import { logout } from "../../actions/auth";
 import { createMessage } from "../../actions/messages";
 import { loadProfile, updateProfile } from "../../actions/profile";
@@ -712,8 +712,9 @@ function LayoutCard({ module, onMessage }) {
 
 function ThemeCard({ themeKey, config, isActive, onSelect }) {
     const [imgError, setImgError] = useState(false);
-    const previewSrc = `/static/img/themes/${themeKey}-preview.png`;
-    const fallbackSrc = `/static/img/themes/bootstrap-preview.png`;
+    const version = window.WATCHER_ASSET_VERSION ? `?v=${window.WATCHER_ASSET_VERSION}` : '';
+    const previewSrc = `/static/img/themes/${themeKey}-preview.png${version}`;
+    const fallbackSrc = `/static/img/themes/bootstrap-preview.png${version}`;
 
     return (
         <div
@@ -757,7 +758,7 @@ const AVATAR_PALETTE = [
 ];
 
 function Profile({ user, profile, logout, createMessage, loadProfile, updateProfile, getSummaryConfig, updateSummaryConfig }) {
-    const { currentTheme, availableThemes, changeTheme } = useTheme();
+    const { currentTheme, availableThemes, changeTheme, effects, setEffects } = useTheme();
     const [activeSection, setActiveSection] = useState('settings');
     const [helpOpen, setHelpOpen] = useState(false);
     const [cooldown, setCooldown] = useState(15);
@@ -806,7 +807,30 @@ function Profile({ user, profile, logout, createMessage, loadProfile, updateProf
         : '?';
 
     return (
-        <Container className="mt-4 mb-5" style={{ maxWidth: 1100 }}>
+        <Container className="wt-profile mt-2 mb-5" style={{ maxWidth: 1100 }}>
+            {user && (
+                <div className="wt-profile-hero">
+                    {('avatar_color' in profile) && !profile.isLoading ? (
+                        <UserAvatar
+                            username={user.username}
+                            firstName={user.first_name}
+                            lastName={user.last_name}
+                            avatarColor={profile.avatar_color}
+                            size={56}
+                        />
+                    ) : <span className="wt-profile-hero-avatar" aria-hidden="true">{initials}</span>}
+                    <div className="wt-profile-hero-id">
+                        <h1>{[user.first_name, user.last_name].filter(Boolean).join(' ') || user.username}</h1>
+                        <span>@{user.username}{user.email ? ` · ${user.email}` : ''}</span>
+                    </div>
+                    <div className="wt-profile-hero-chips">
+                        {user.is_superuser && <span className="wt-pill"><i className="material-icons" aria-hidden="true">shield_person</i>Superuser</span>}
+                        {availableThemes[currentTheme] && (
+                            <span className="wt-pill"><i className="material-icons" aria-hidden="true">palette</i>{availableThemes[currentTheme].name}</span>
+                        )}
+                    </div>
+                </div>
+            )}
             <Row>
                 <Col lg={3} className="mb-4">
                     <Card className="shadow-sm">
@@ -834,18 +858,6 @@ function Profile({ user, profile, logout, createMessage, loadProfile, updateProf
                                         </Nav.Link>
                                     </Nav.Item>
                                 ))}
-                                {user && user.is_superuser && (
-                                    <Nav.Item>
-                                        <Nav.Link
-                                            as={Link}
-                                            to="/connectors"
-                                            className="d-flex align-items-center gap-2 rounded-0 py-3 px-3"
-                                        >
-                                            <i className="material-icons" style={{ fontSize: 18 }}>power</i>
-                                            Connectors
-                                        </Nav.Link>
-                                    </Nav.Item>
-                                )}
                                 <hr className="my-0" />
                                 <Nav.Item>
                                     <button
@@ -1047,6 +1059,37 @@ function Profile({ user, profile, logout, createMessage, loadProfile, updateProf
                                 </h5>
                             </Card.Header>
                             <Card.Body>
+                                <div className="wt-effects-setting mb-4">
+                                    <div className="wt-effects-text">
+                                        <span className="fw-semibold d-flex align-items-center gap-2">
+                                            <i className="material-icons" style={{ fontSize: 18 }}>blur_on</i>
+                                            Background effects
+                                        </span>
+                                        <small className="text-muted">
+                                            {availableThemes[currentTheme]?.ambient
+                                                ? EFFECT_LEVELS[effects].description
+                                                : 'Applies to themes with an animated background (Clay, Clay Light).'}
+                                        </small>
+                                    </div>
+                                    <div className="wt-segmented" role="radiogroup" aria-label="Background effects">
+                                        {Object.entries(EFFECT_LEVELS).map(([key, level]) => (
+                                            <button
+                                                key={key}
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={effects === key}
+                                                className={effects === key ? 'is-active' : ''}
+                                                title={level.description}
+                                                onClick={() => {
+                                                    setEffects(key);
+                                                    createMessage({ themeChanged: `Background effects: ${level.label}.` });
+                                                }}
+                                            >
+                                                {level.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                                 <div className="d-flex align-items-center gap-2 mb-3">
                                     <span className="fw-semibold text-muted text-uppercase" style={{ fontSize: 11, letterSpacing: 1 }}>Light Themes</span>
                                 </div>
