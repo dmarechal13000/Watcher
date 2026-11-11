@@ -1,0 +1,349 @@
+/*
+ * Clay - Watcher theme (dark)
+ * Warm charcoal surfaces, terracotta accent, serif headings, translucent glass modules
+ * floating over an animated ambient backdrop (components/common/ThemeBackdrop.js).
+ * Built on vanilla Bootstrap 5.3.8 in its native dark colour mode (html[data-bs-theme=dark]);
+ * the shared modern layer (watcher-modern.css) applies on top.
+ */
+@import url("../vendor/bootstrap-5.3.8.min.css");
+
+/* ---------------------------------------------------------------- palette */
+
+html[data-wt-theme="clay"],
+html[data-wt-theme="clay"][data-bs-theme=dark] {
+    color-scheme: dark;
+
+    --bs-blue: #7aa7c7;
+    --bs-red: #e0675a;
+    --bs-orange: #d97757;
+    --bs-yellow: #e0a83a;
+    --bs-green: #82b386;
+    --bs-cyan: #6fa9c2;
+
+    --bs-primary: #d97757;
+    --bs-primary-rgb: 217, 119, 87;
+    --bs-secondary: #8a877d;
+    --bs-secondary-rgb: 138, 135, 125;
+    --bs-success: #82b386;
+    --bs-success-rgb: 130, 179, 134;
+    --bs-info: #6fa9c2;
+    --bs-info-rgb: 111, 169, 194;
+    --bs-warning: #e0a83a;
+    --bs-warning-rgb: 224, 168, 58;
+    --bs-danger: #e0675a;
+    --bs-danger-rgb: 224, 103, 90;
+    --bs-light: #e8e6dc;
+    --bs-light-rgb: 232, 230, 220;
+    --bs-dark: #141413;
+    --bs-dark-rgb: 20, 20, 19;
+
+    --bs-primary-text-emphasis: #f0b49c;
+    --bs-primary-bg-subtle: #3a2820;
+    --bs-primary-border-subtle: #6b3d2c;
+    --bs-success-text-emphasis: #b7d6b9;
+    --bs-danger-text-emphasis: #f2a79e;
+    --bs-warning-text-emphasis: #f0cf8a;
+    --bs-info-text-emphasis: #aacfe0;
+
+    --bs-body-color: #e8e6dc;
+    --bs-body-color-rgb: 232, 230, 220;
+    --bs-body-bg: #1c1b19;
+    --bs-body-bg-rgb: 28, 27, 25;
+    --bs-emphasis-color: #faf9f5;
+    --bs-emphasis-color-rgb: 250, 249, 245;
+    --bs-secondary-color: rgba(232, 230, 220, .62);
+    --bs-secondary-color-rgb: 232, 230, 220;
+    --bs-secondary-bg: #2b2a27;
+    --bs-secondary-bg-rgb: 43, 42, 39;
+    --bs-tertiary-color: rgba(232, 230, 220, .42);
+    --bs-tertiary-bg: #242321;
+    --bs-tertiary-bg-rgb: 36, 35, 33;
+    --bs-heading-color: #faf9f5;
+
+    --bs-link-color: #e08a6c;
+    --bs-link-color-rgb: 224, 138, 108;
+    --bs-link-hover-color: #f0a88e;
+    --bs-link-hover-color-rgb: 240, 168, 142;
+
+    --bs-border-color: rgba(250, 249, 245, .1);
+    --bs-border-color-translucent: rgba(250, 249, 245, .1);
+    --bs-focus-ring-color: rgba(217, 119, 87, .3);
+    --bs-highlight-bg: #4a3024;
+    --bs-highlight-color: #faf9f5;
+    --bs-code-color: #f0a88e;
+
+    --wt-serif: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+}
+
+/* Watcher tokens (higher specificity than watcher-modern's dark-mode tokens) */
+html[data-wt-theme="clay"][data-wt-mode] {
+    --wt-glass: rgba(38, 38, 36, .44);
+    --wt-glass-strong: rgba(36, 35, 33, .82);
+    --wt-surface: rgba(48, 48, 46, .55);
+    --wt-surface-sunken: rgba(20, 20, 19, .45);
+    --wt-sidebar-bg: rgba(22, 21, 20, .62);
+    --wt-topbar-bg: rgba(28, 27, 25, .55);
+    --wt-border: rgba(250, 249, 245, .09);
+    --wt-border-strong: rgba(250, 249, 245, .18);
+    --wt-muted: rgba(232, 230, 220, .6);
+    --wt-hover: rgba(250, 249, 245, .06);
+    --wt-accent-text: #ec9a7c;
+    --wt-accent-soft: rgba(217, 119, 87, .16);
+    --wt-accent-line: rgba(217, 119, 87, .42);
+    --wt-glass-blur: blur(9px) saturate(135%);
+    --wt-shadow-sm: 0 1px 2px rgba(0, 0, 0, .35);
+    --wt-shadow: 0 1px 0 rgba(250, 249, 245, .04) inset, 0 18px 40px -22px rgba(0, 0, 0, .8);
+    --wt-shadow-lg: 0 1px 0 rgba(250, 249, 245, .05) inset, 0 34px 70px -24px rgba(0, 0, 0, .9);
+}
+
+html[data-wt-theme="clay"] body {
+    background: #1c1b19;
+}
+
+/* Serif headings, the signature of the theme */
+html[data-wt-theme="clay"] :is(h1, h2, h3, h4, .h1, .h2, .h3, .h4) {
+    font-family: var(--wt-serif);
+    font-weight: 560;
+    letter-spacing: -0.01em;
+}
+
+html[data-wt-theme="clay"] .wt-login-hero h1 { font-weight: 480; letter-spacing: -0.02em; }
+
+/* ---------------------------------------------------------------- glass modules */
+
+html[data-wt-theme="clay"] .card {
+    --bs-card-bg: var(--wt-glass);
+    --bs-card-border-color: var(--wt-border);
+    --bs-card-color: var(--bs-body-color);
+    backdrop-filter: var(--wt-glass-blur);
+    -webkit-backdrop-filter: var(--wt-glass-blur);
+}
+
+/* Cards nested in a card: a faint lift instead of a second blur layer */
+html[data-wt-theme="clay"] .card .card {
+    --bs-card-bg: rgba(250, 249, 245, .025);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+}
+
+html[data-wt-theme="clay"] .wt-sidebar,
+html[data-wt-theme="clay"] .wt-topbar,
+html[data-wt-theme="clay"] .wt-login-card,
+html[data-wt-theme="clay"] .wt-feature {
+    backdrop-filter: var(--wt-glass-blur);
+    -webkit-backdrop-filter: var(--wt-glass-blur);
+}
+
+html[data-wt-theme="clay"] .wt-login-card { background: var(--wt-glass); }
+
+html[data-wt-theme="clay"] .wt-icon-chip {
+    background: rgba(250, 249, 245, .04);
+}
+
+/* Overlays stay readable: more opaque glass */
+html[data-wt-theme="clay"] .modal {
+    --bs-modal-bg: var(--wt-glass-strong);
+    --bs-modal-color: var(--bs-body-color);
+}
+
+html[data-wt-theme="clay"] .modal-content {
+    backdrop-filter: blur(24px) saturate(140%);
+}
+
+html[data-wt-theme="clay"] .dropdown-menu {
+    --bs-dropdown-bg: #262624;
+    --bs-dropdown-link-color: var(--bs-body-color);
+    --bs-dropdown-link-hover-bg: rgba(250, 249, 245, .07);
+    --bs-dropdown-link-hover-color: #faf9f5;
+    --bs-dropdown-link-active-bg: #c96442;
+}
+
+html[data-wt-theme="clay"] .popover { --bs-popover-bg: rgba(38, 38, 36, .94); }
+html[data-wt-theme="clay"] .toast { --bs-toast-bg: rgba(38, 38, 36, .9); }
+html[data-wt-theme="clay"] .tooltip { --bs-tooltip-bg: #faf9f5; --bs-tooltip-color: #1c1b19; }
+html[data-wt-theme="clay"] .modal-backdrop { --bs-backdrop-bg: #0d0c0b; --bs-backdrop-opacity: .6; }
+
+/* Tables inherit the glass; sticky headers get a solid-enough tint */
+html[data-wt-theme="clay"] .table {
+    --bs-table-color: var(--bs-body-color);
+    --bs-table-hover-bg: rgba(217, 119, 87, .07);
+    --bs-table-hover-color: #faf9f5;
+}
+
+html[data-wt-theme="clay"] .table > thead > tr > th,
+html[data-wt-theme="clay"] .table > thead > tr > td {
+    background-color: rgba(30, 29, 27, .78);
+}
+
+/* Inputs: recessed into the glass */
+html[data-wt-theme="clay"] .form-control,
+html[data-wt-theme="clay"] .form-select,
+html[data-wt-theme="clay"] .input-group-text {
+    background-color: rgba(20, 20, 19, .45);
+    border-color: rgba(250, 249, 245, .12);
+    color: var(--bs-body-color);
+}
+
+html[data-wt-theme="clay"] .form-control::placeholder { color: rgba(232, 230, 220, .38); }
+html[data-wt-theme="clay"] .form-floating > .form-control::placeholder { color: transparent; }
+html[data-wt-theme="clay"] .form-control:disabled { background-color: rgba(20, 20, 19, .25); }
+
+html[data-wt-theme="clay"] .form-check-input {
+    background-color: rgba(20, 20, 19, .5);
+    border-color: rgba(250, 249, 245, .22);
+}
+
+html[data-wt-theme="clay"] .form-check-input:checked {
+    background-color: #d97757;
+    border-color: #d97757;
+}
+
+html[data-wt-theme="clay"] .form-switch .form-check-input:focus {
+    --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23ec9a7c'/%3e%3c/svg%3e");
+}
+
+html[data-wt-theme="clay"] .form-range::-webkit-slider-thumb { background-color: #d97757; }
+html[data-wt-theme="clay"] .form-range::-moz-range-thumb { background-color: #d97757; }
+
+/* ---------------------------------------------------------------- buttons */
+
+html[data-wt-theme="clay"] .btn-primary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #c96442;
+    --bs-btn-border-color: #c96442;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #d97757;
+    --bs-btn-hover-border-color: #d97757;
+    --bs-btn-focus-shadow-rgb: 217, 119, 87;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #b5532f;
+    --bs-btn-active-border-color: #b5532f;
+    --bs-btn-disabled-color: rgba(255, 255, 255, .7);
+    --bs-btn-disabled-bg: #6b3d2c;
+    --bs-btn-disabled-border-color: #6b3d2c;
+}
+
+html[data-wt-theme="clay"] .btn-outline-primary {
+    --bs-btn-color: #ec9a7c;
+    --bs-btn-border-color: rgba(217, 119, 87, .5);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #c96442;
+    --bs-btn-hover-border-color: #c96442;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #b5532f;
+    --bs-btn-active-border-color: #b5532f;
+}
+
+html[data-wt-theme="clay"] .btn-secondary {
+    --bs-btn-color: #e8e6dc;
+    --bs-btn-bg: rgba(250, 249, 245, .07);
+    --bs-btn-border-color: rgba(250, 249, 245, .12);
+    --bs-btn-hover-color: #faf9f5;
+    --bs-btn-hover-bg: rgba(250, 249, 245, .12);
+    --bs-btn-hover-border-color: rgba(250, 249, 245, .2);
+    --bs-btn-active-color: #faf9f5;
+    --bs-btn-active-bg: rgba(250, 249, 245, .16);
+    --bs-btn-active-border-color: rgba(250, 249, 245, .24);
+    --bs-btn-disabled-color: rgba(232, 230, 220, .45);
+    --bs-btn-disabled-bg: rgba(250, 249, 245, .04);
+    --bs-btn-disabled-border-color: rgba(250, 249, 245, .08);
+}
+
+html[data-wt-theme="clay"] .btn-outline-secondary {
+    --bs-btn-color: #c2c0b6;
+    --bs-btn-border-color: rgba(250, 249, 245, .16);
+    --bs-btn-hover-color: #faf9f5;
+    --bs-btn-hover-bg: rgba(250, 249, 245, .08);
+    --bs-btn-hover-border-color: rgba(250, 249, 245, .24);
+    --bs-btn-active-color: #faf9f5;
+    --bs-btn-active-bg: rgba(250, 249, 245, .12);
+    --bs-btn-active-border-color: rgba(250, 249, 245, .24);
+}
+
+html[data-wt-theme="clay"] .btn-success {
+    --bs-btn-color: #10200f; --bs-btn-hover-color: #10200f; --bs-btn-active-color: #10200f;
+    --bs-btn-bg: #82b386; --bs-btn-border-color: #82b386;
+    --bs-btn-hover-bg: #95c299; --bs-btn-hover-border-color: #95c299;
+    --bs-btn-active-bg: #6fa073; --bs-btn-active-border-color: #6fa073;
+}
+
+html[data-wt-theme="clay"] .btn-danger {
+    --bs-btn-color: #fff; --bs-btn-hover-color: #fff; --bs-btn-active-color: #fff;
+    --bs-btn-bg: #c4483b; --bs-btn-border-color: #c4483b;
+    --bs-btn-hover-bg: #d4594c; --bs-btn-hover-border-color: #d4594c;
+    --bs-btn-active-bg: #a93b30; --bs-btn-active-border-color: #a93b30;
+}
+
+html[data-wt-theme="clay"] .btn-warning {
+    --bs-btn-color: #241903; --bs-btn-hover-color: #241903; --bs-btn-active-color: #241903;
+    --bs-btn-bg: #e0a83a; --bs-btn-border-color: #e0a83a;
+    --bs-btn-hover-bg: #eab654; --bs-btn-hover-border-color: #eab654;
+    --bs-btn-active-bg: #c9922a; --bs-btn-active-border-color: #c9922a;
+}
+
+html[data-wt-theme="clay"] .btn-info {
+    --bs-btn-color: #0d1d24; --bs-btn-hover-color: #0d1d24; --bs-btn-active-color: #0d1d24;
+    --bs-btn-bg: #6fa9c2; --bs-btn-border-color: #6fa9c2;
+    --bs-btn-hover-bg: #84b8ce; --bs-btn-hover-border-color: #84b8ce;
+    --bs-btn-active-bg: #5b95ae; --bs-btn-active-border-color: #5b95ae;
+}
+
+html[data-wt-theme="clay"] .btn-dark {
+    --bs-btn-bg: #141413; --bs-btn-border-color: rgba(250, 249, 245, .1);
+    --bs-btn-hover-bg: #262624; --bs-btn-hover-border-color: rgba(250, 249, 245, .16);
+}
+
+html[data-wt-theme="clay"] .btn-light {
+    --bs-btn-color: #1c1b19; --bs-btn-bg: #e8e6dc; --bs-btn-border-color: #e8e6dc;
+    --bs-btn-hover-bg: #faf9f5; --bs-btn-hover-border-color: #faf9f5;
+}
+
+/* ---------------------------------------------------------------- misc components */
+
+html[data-wt-theme="clay"] .nav-pills { --bs-nav-pills-link-active-bg: #c96442; }
+html[data-wt-theme="clay"] .nav { --bs-nav-link-color: #e08a6c; --bs-nav-link-hover-color: #f0a88e; }
+
+html[data-wt-theme="clay"] .pagination {
+    --bs-pagination-color: #c2c0b6;
+    --bs-pagination-bg: rgba(250, 249, 245, .04);
+    --bs-pagination-border-color: rgba(250, 249, 245, .1);
+    --bs-pagination-hover-color: #faf9f5;
+    --bs-pagination-hover-bg: rgba(250, 249, 245, .09);
+    --bs-pagination-active-bg: #c96442;
+    --bs-pagination-active-border-color: #c96442;
+    --bs-pagination-disabled-bg: transparent;
+    --bs-pagination-disabled-color: rgba(232, 230, 220, .3);
+    --bs-pagination-focus-box-shadow: 0 0 0 .25rem rgba(217, 119, 87, .3);
+}
+
+html[data-wt-theme="clay"] .progress { --bs-progress-bg: rgba(250, 249, 245, .08); --bs-progress-bar-bg: #d97757; }
+
+html[data-wt-theme="clay"] .list-group {
+    --bs-list-group-bg: transparent;
+    --bs-list-group-active-bg: #c96442;
+    --bs-list-group-active-border-color: #c96442;
+}
+
+html[data-wt-theme="clay"] .bg-light { background-color: rgba(250, 249, 245, .06) !important; }
+html[data-wt-theme="clay"] .bg-white { background-color: var(--wt-glass) !important; }
+html[data-wt-theme="clay"] .text-primary { color: #ec9a7c !important; }
+html[data-wt-theme="clay"] .border-primary { border-color: #d97757 !important; }
+html[data-wt-theme="clay"] .text-dark { color: #faf9f5 !important; }
+
+/* ---------------------------------------------------------------- ambient backdrop */
+/* Shared styles live in watcher-modern.css (.wt-ambient-*); this theme enables the layer and tints it. */
+
+html[data-wt-theme="clay"] .wt-ambient {
+    opacity: 1;
+    --wt-amb-blob-1: rgba(217, 119, 87, .3);
+    --wt-amb-blob-2: rgba(201, 138, 26, .17);
+    --wt-amb-blob-3: rgba(150, 92, 140, .16);
+    --wt-amb-spot: rgba(236, 154, 124, .2);
+    --wt-amb-mark: rgba(236, 154, 124, .075);
+    --wt-amb-ripple: #ec9a7c;
+    --wt-amb-ring: rgba(240, 168, 142, .95);
+    --wt-amb-ring-fill: rgba(217, 119, 87, .6);
+    --wt-amb-ring-glow: rgba(217, 119, 87, .45);
+    --wt-amb-grain: .05;
+}

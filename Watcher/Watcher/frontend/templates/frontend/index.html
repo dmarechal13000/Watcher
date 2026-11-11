@@ -1,42 +1,79 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-wt-theme="darkly" data-wt-mode="dark">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Watcher</title>
     {% load static %}
+    <link rel="icon" href="{% static 'img/favicon.svg' %}?v={{ asset_version }}" type="image/svg+xml">
     <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
     <link rel="icon" href="{% static 'img/favicon-32.png' %}" sizes="32x32" type="image/png">
     <link rel="icon" href="{% static 'img/favicon-64.png' %}" sizes="64x64" type="image/png">
     <link rel="icon" href="{% static 'img/favicon-96.png' %}" sizes="96x96" type="image/png">
     <link rel="icon" href="{% static 'img/favicon-196.png' %}" sizes="196x196" type="image/png">
-    <link id="theme-stylesheet" rel="stylesheet" href="{% static 'css/themes/darkly.min.css' %}">
-    <link rel="stylesheet" href="{% static "css/material-design-icons.css" %}">
-    <link rel="stylesheet" href="{% static "css/day-picker.css" %}">
-    <link rel="stylesheet" href="{% static "css/style.css" %}">
-</head>
-<body>
-<div id="app"></div>
-
+    <link rel="preload" href="{% static 'fonts/material-symbols/material-symbols-rounded.woff2' %}" as="font" type="font/woff2" crossorigin>
 <script>
+window.WATCHER_ASSET_VERSION = '{{ asset_version }}';
 window.AVAILABLE_THEMES = {
-    'flatly': '{% static "css/themes/flatly.min.css" %}',
-    'cyborg': '{% static "css/themes/cyborg.min.css" %}',
-    'superhero': '{% static "css/themes/superhero.min.css" %}',
-    'brite': '{% static "css/themes/brite.min.css" %}',
-    'lux': '{% static "css/themes/lux.min.css" %}',
-    'darkly': '{% static "css/themes/darkly.min.css" %}',
-    'slate': '{% static "css/themes/slate.min.css" %}',
-    'cosmo': '{% static "css/themes/cosmo.min.css" %}',
-    'morph': '{% static "css/themes/morph.min.css" %}',
-    'sandstone': '{% static "css/themes/sandstone.min.css" %}',
-    'solar': '{% static "css/themes/solar.min.css" %}',
-    'united': '{% static "css/themes/united.min.css" %}',
-    'yeti': '{% static "css/themes/yeti.min.css" %}',
-    'minty': '{% static "css/themes/minty.min.css" %}'
+    'flatly': '{% static "css/themes/flatly.min.css" %}?v={{ asset_version }}',
+    'cyborg': '{% static "css/themes/cyborg.min.css" %}?v={{ asset_version }}',
+    'superhero': '{% static "css/themes/superhero.min.css" %}?v={{ asset_version }}',
+    'brite': '{% static "css/themes/brite.min.css" %}?v={{ asset_version }}',
+    'lux': '{% static "css/themes/lux.min.css" %}?v={{ asset_version }}',
+    'darkly': '{% static "css/themes/darkly.min.css" %}?v={{ asset_version }}',
+    'slate': '{% static "css/themes/slate.min.css" %}?v={{ asset_version }}',
+    'cosmo': '{% static "css/themes/cosmo.min.css" %}?v={{ asset_version }}',
+    'morph': '{% static "css/themes/morph.min.css" %}?v={{ asset_version }}',
+    'sandstone': '{% static "css/themes/sandstone.min.css" %}?v={{ asset_version }}',
+    'solar': '{% static "css/themes/solar.min.css" %}?v={{ asset_version }}',
+    'united': '{% static "css/themes/united.min.css" %}?v={{ asset_version }}',
+    'yeti': '{% static "css/themes/yeti.min.css" %}?v={{ asset_version }}',
+    'minty': '{% static "css/themes/minty.min.css" %}?v={{ asset_version }}',
+    'clay': '{% static "css/themes/clay.css" %}?v={{ asset_version }}',
+    'clay-light': '{% static "css/themes/clay-light.css" %}?v={{ asset_version }}'
 };
 </script>
+    <link id="theme-stylesheet" rel="stylesheet" href="{% static 'css/themes/darkly.min.css' %}?v={{ asset_version }}">
+<script>
+// Re-apply the last theme before first paint (the profile request confirms it later)
+(function () {
+    try {
+        var saved = JSON.parse(localStorage.getItem('wt-theme') || 'null');
+        if (!saved || !window.AVAILABLE_THEMES[saved.name]) return;
+        document.getElementById('theme-stylesheet').href = window.AVAILABLE_THEMES[saved.name];
+        var root = document.documentElement;
+        root.setAttribute('data-wt-theme', saved.name);
+        root.setAttribute('data-wt-mode', saved.mode === 'light' ? 'light' : 'dark');
+        if (saved.bs) root.setAttribute('data-bs-theme', saved.bs);
+    } catch (e) { /* storage unavailable: default theme */ }
+})();
+</script>
+    <link rel="stylesheet" href="{% static "css/material-design-icons.css" %}?v={{ asset_version }}">
+    <link rel="stylesheet" href="{% static "css/day-picker.css" %}?v={{ asset_version }}">
+    <link rel="stylesheet" href="{% static "css/style.css" %}?v={{ asset_version }}">
+    <link rel="stylesheet" href="{% static "css/watcher-modern.css" %}?v={{ asset_version }}">
+</head>
+<body>
+<div id="app">
+    <div class="wt-boot" role="status" aria-label="Loading Watcher">
+        <span class="wt-logo wt-boot-logo">
+            <svg viewBox="0 0 120 80" aria-hidden="true">
+                <defs><mask id="wt-boot-pupil"><rect x="-20" y="-20" width="160" height="120" fill="#fff"/><circle cx="54" cy="27" r="5.5" fill="#000"/></mask></defs>
+                <path d="M6 40 C 30 10, 90 10, 114 40 C 90 70, 30 70, 6 40 Z" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round"/>
+                <g class="wt-mark-iris">
+                    <circle cx="60" cy="37" r="23" fill="none" stroke="currentColor" stroke-width="6"/>
+                    <circle cx="60" cy="34" r="14" fill="currentColor" mask="url(#wt-boot-pupil)"/>
+                    <path d="M48 49 Q 60 57 72 49" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"/>
+                </g>
+            </svg>
+        </span>
+        <div class="wt-boot-name">Watcher</div>
+        <div class="wt-boot-bar"><span></span></div>
+    </div>
+</div>
 
-<script src="{% static "frontend/main.js" %}"></script>
+
+<script src="{% static "frontend/main.js" %}?v={{ asset_version }}"></script>
 <script src="{% static "js/jquery-3.4.1.slim.min.js" %}"
         integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
         crossorigin="anonymous"></script>

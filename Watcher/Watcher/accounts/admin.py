@@ -324,6 +324,8 @@ THEME_CHOICES = [
     ('solar', 'Solar'),
     ('superhero', 'Superhero'),
     ('brite', 'Brite'),
+    ('clay', 'Clay'),
+    ('clay-light', 'Clay Light'),
 ]
 
 MODULE_LAYOUT_LABELS = {
