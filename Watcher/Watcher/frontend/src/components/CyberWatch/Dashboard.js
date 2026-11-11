@@ -1,15 +1,15 @@
 import React, { Component, Fragment } from 'react';
 import WatchRules from './WatchRules';
-import CyberWatchStats from './CyberWatchStats';
 import MonitoredKeywordsPanel from './MonitoredKeywordsPanel';
 import SourcesPanel from './SourcesPanel';
 import BannedWordsPanel from './BannedWordsPanel';
 import ArchivedAlerts from './ArchivedAlerts';
 import PanelGrid from '../common/PanelGrid';
 import { LAYOUT_PRESETS } from '../../config/layoutPresets';
+import ModuleTabs from '../common/ModuleTabs';
+import { CYBER_WATCH_TABS, CyberSurveillanceKpis } from './StatisticsPage';
 
 const DEFAULT_LAYOUT = [
-    { i: 'stats',     x: 0, y: 0,  w: 12, h: 4,  minW: 6, minH: 4 },
     { i: 'monitored', x: 0, y: 4,  w: 6,  h: 11, minW: 4, minH: 5 },
     { i: 'watchrules',x: 6, y: 4,  w: 6,  h: 11, minW: 4, minH: 5 },
     { i: 'sources',   x: 0, y: 15, w: 6,  h: 11, minW: 4, minH: 5 },
@@ -17,21 +17,11 @@ const DEFAULT_LAYOUT = [
     { i: 'archived',  x: 0, y: 26, w: 12, h: 12, minW: 4, minH: 6 },
 ];
 
-const DEFAULT_ACTIVE = ['stats', 'monitored', 'watchrules', 'sources', 'banned', 'archived'];
+const DEFAULT_ACTIVE = ['monitored', 'watchrules', 'sources', 'banned', 'archived'];
 
 class CyberWatchDashboard extends Component {
     buildPanels() {
         return {
-            stats: {
-                label: 'Statistics',
-                icon: 'bar_chart',
-                tooltip: 'Overview of watch rules, keywords, and alert activity',
-                children: (
-                    <div style={{ padding: '12px 16px', height: '100%', overflowY: 'auto' }}>
-                        <CyberWatchStats />
-                    </div>
-                ),
-            },
             monitored: {
                 label: 'Monitored Keywords',
                 icon: 'track_changes',
@@ -88,6 +78,8 @@ class CyberWatchDashboard extends Component {
     render() {
         return (
             <Fragment>
+                <ModuleTabs tabs={CYBER_WATCH_TABS} />
+                <CyberSurveillanceKpis />
                 <PanelGrid
                     panels={this.buildPanels()}
                     defaultLayout={DEFAULT_LAYOUT}

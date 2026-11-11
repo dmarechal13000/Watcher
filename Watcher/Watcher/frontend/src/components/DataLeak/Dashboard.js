@@ -4,19 +4,20 @@ import {getAlerts, getKeyWords} from "../../actions/DataLeak";
 import SearchPatterns from "./SearchPatterns";
 import Alerts from "./Alerts";
 import ArchivedAlerts from "./ArchivedAlerts";
-import DataLeakStats from "./DataLeakStats";
 import TableManager from '../common/TableManager';
 import PanelGrid from '../common/PanelGrid';
 import { LAYOUT_PRESETS } from '../../config/layoutPresets';
+import ModuleTabs from '../common/ModuleTabs';
+import { DATA_LEAK_TABS, DataLeakSurveillanceKpis } from './StatisticsPage';
+import { claimFilters, withFilterDefaults } from '../common/pendingFilters';
 
 const DEFAULT_LAYOUT = [
-    { i: 'stats',    x: 0, y: 0,  w: 12, h: 8,  minW: 6, minH: 3  },
     { i: 'alerts',   x: 0, y: 8,  w: 8,  h: 11, minW: 4, minH: 5  },
     { i: 'patterns', x: 8, y: 8,  w: 4,  h: 11, minW: 3, minH: 5  },
     { i: 'archived', x: 0, y: 19, w: 12, h: 9,  minW: 6, minH: 5  },
 ];
 
-const DEFAULT_ACTIVE = ['stats', 'alerts', 'patterns', 'archived'];
+const DEFAULT_ACTIVE = ['alerts', 'patterns', 'archived'];
 
 const FILTER_CONFIG = [
     {
@@ -45,6 +46,8 @@ const FILTER_CONFIG = [
 class Dashboard extends Component {
     constructor(props) {
         super(props);
+        // Filter requested by a click on the Statistics tab (see common/pendingFilters)
+        this.requestedFilters = claimFilters('data_leak');
         this.state = {
             globalFilters: {
                 search: '',
@@ -186,16 +189,6 @@ class Dashboard extends Component {
         const dataToPass = filteredAlerts.length > 0 ? filteredAlerts : alerts;
 
         return {
-            stats: {
-                label: 'Statistics',
-                icon: 'bar_chart',
-                tooltip: 'Overview of total alerts, active threats, and keyword coverage',
-                children: (
-                    <div style={{ padding: '12px 16px', height: '100%', overflowY: 'auto' }}>
-                        <DataLeakStats />
-                    </div>
-                ),
-            },
             alerts: {
                 label: 'Alerts',
                 icon: 'notifications',
@@ -240,12 +233,15 @@ class Dashboard extends Component {
 
     render() {
         const { alerts } = this.props;
-        const filterConfig = this.getFilterConfig();
+        const filterConfig = withFilterDefaults(this.getFilterConfig(), this.requestedFilters);
 
         return (
             <Fragment>
+                <ModuleTabs tabs={DATA_LEAK_TABS} />
+                <DataLeakSurveillanceKpis />
                 <div className="container-fluid mt-4">
                     <TableManager
+                        revealFilters={!!this.requestedFilters}
                         data={alerts}
                         filterConfig={filterConfig}
                         onFiltersChange={this.handleFilterChange}

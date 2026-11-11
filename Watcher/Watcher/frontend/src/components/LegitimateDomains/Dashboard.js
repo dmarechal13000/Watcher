@@ -2,19 +2,19 @@ import React, { Component, Fragment } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { getLegitimateDomains, getLegitimateDomainsBatch } from '../../actions/LegitimateDomain';
-import LegitimateStats from './LegitimateStats';
 import LegitimateDomains from './LegitimateDomains';
 import PanelGrid from '../common/PanelGrid';
 import { LAYOUT_PRESETS } from '../../config/layoutPresets';
 import store from "../../store";
 import {setIsPasswordChanged} from "../../actions/auth";
+import ModuleTabs from '../common/ModuleTabs';
+import { LEGITIMATE_DOMAINS_TABS, LegitSurveillanceKpis } from './StatisticsPage';
 
 const DEFAULT_LAYOUT = [
-    { i: 'stats',   x: 0, y: 0, w: 12, h: 9,  minW: 6, minH: 3 },
     { i: 'domains', x: 0, y: 3, w: 12, h: 11, minW: 5, minH: 6 },
 ];
 
-const DEFAULT_ACTIVE = ['stats', 'domains'];
+const DEFAULT_ACTIVE = ['domains'];
 
 class Dashboard extends Component {
     static propTypes = {
@@ -68,15 +68,6 @@ class Dashboard extends Component {
 
     buildPanels() {
         return {
-            stats: {
-                label: 'Statistics',
-                icon: 'bar_chart',
-                children: (
-                    <div style={{ padding: '12px 16px', height: '100%', overflowY: 'auto' }}>
-                        <LegitimateStats />
-                    </div>
-                ),
-            },
             domains: {
                 label: 'Legitimate Domains',
                 icon: 'domain',
@@ -92,6 +83,8 @@ class Dashboard extends Component {
     render() {
         return (
             <Fragment>
+                <ModuleTabs tabs={LEGITIMATE_DOMAINS_TABS} />
+                <LegitSurveillanceKpis />
                 <PanelGrid
                     panels={this.buildPanels()}
                     defaultLayout={DEFAULT_LAYOUT}

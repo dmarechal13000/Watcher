@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
-import { Line } from 'react-chartjs-2';
+import { Line } from '../common/ThemedCharts';
 import moment from 'moment';
 import PropTypes from 'prop-types';
+import { token, CHART_INK } from '../common/chartTheme';
 
 const C = {
-    primary: { solid: '#4e73df', faded: 'rgba(78,115,223,0.12)', hover: 'rgba(78,115,223,1)' },
+    primary: { solid: token('primary', 1), faded: token('primary', 0.12), hover: token('primary', 1) },
 };
 
 class TrendChart extends Component {
@@ -80,19 +81,19 @@ class TrendChart extends Component {
                     type: 'time',
                     time: { unit: 'day', displayFormats: { day: 'MMM D' } },
                     gridLines: { display: false },
-                    ticks: { fontColor: '#858796', maxTicksLimit: 10, fontSize: 11 },
+                    ticks: { fontColor: CHART_INK.text, maxTicksLimit: 10, fontSize: 11 },
                 }],
                 yAxes: [{
                     ticks: {
                         beginAtZero: true,
                         stepSize: 1,
                         precision: 0,
-                        fontColor: '#858796',
+                        fontColor: CHART_INK.text,
                         maxTicksLimit: 5,
                         fontSize: 11,
                     },
                     gridLines: {
-                        color: 'rgba(100,100,120,0.12)',
+                        color: CHART_INK.grid,
                         borderDash: [2],
                         drawBorder: false,
                     },
@@ -114,7 +115,7 @@ class TrendChart extends Component {
                             <Line data={data} options={options} />
                         </div>
                         {span > 1 && (
-                            <div className="d-flex justify-content-between" style={{ fontSize: '0.73rem', color: '#adb5bd', flexShrink: 0 }}>
+                            <div className="d-flex justify-content-between" style={{ fontSize: '0.73rem', color: 'var(--wt-muted)', flexShrink: 0 }}>
                                 <span>First: <strong>{earliest}</strong></span>
                                 <span>{span} day{span !== 1 ? 's' : ''}</span>
                                 <span>Last: <strong>{latest}</strong></span>

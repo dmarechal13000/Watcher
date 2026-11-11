@@ -11,16 +11,18 @@ import WordSummary from './WordSummary';
 import ResizableContainer from '../common/ResizableContainer';
 import WorldMapPanel from './WorldMap';
 import RansomwareVictims from './RansomwareVictims';
-import ThreatsWatcherStatistics from './ThreatsWatcherStatistics';
 import CVEVulnerabilities from './CVEVulnerabilities';
 import PanelGrid from '../common/PanelGrid';
 import { LAYOUT_PRESETS } from '../../config/layoutPresets';
 import store from '../../store';
 import { setIsPasswordChanged } from '../../actions/auth';
+import { claimDetail, onDetailRequest } from '../common/detailFocus';
+import ModuleTabs from '../common/ModuleTabs';
+import SurveillanceKpis from './SurveillanceKpis';
+import { THREATS_WATCHER_TABS } from './tabs';
 
 
 const DEFAULT_LAYOUT = [
-    { i: 'stats',   x: 0, y: 0,  w: 12, h: 10, minW: 6, minH: 3,  moved: false, static: false },
     { i: 'cloud',   x: 0, y: 10, w: 6,  h: 10, minW: 3, minH: 5,  moved: false, static: false },
     { i: 'words',   x: 6, y: 10, w: 6,  h: 10, minW: 3, minH: 5,  moved: false, static: false },
     { i: 'sources', x: 0, y: 20, w: 12, h: 11, minW: 6, minH: 5,  moved: false, static: false },
@@ -30,7 +32,7 @@ const DEFAULT_LAYOUT = [
     { i: 'cve',     x: 0, y: 49, w: 12, h: 12, minW: 4, minH: 5,  moved: false, static: false },
 ];
 
-const DEFAULT_ACTIVE = ['stats', 'cloud', 'words', 'map', 'victims', 'cve', 'sources', 'chart'];
+const DEFAULT_ACTIVE = ['cloud', 'words', 'map', 'victims', 'cve', 'sources', 'chart'];
 
 // rowHeight = 55. Formula: Math.ceil((200 + n * 50) / 55) + 1
 const itemsToH = (n) => Math.ceil((200 + n * 50) / 55) + 1;
@@ -53,12 +55,21 @@ class Dashboard extends Component {
     }
 
 
+    // Open a record requested from the command palette (Ctrl+K) once it is in the list
+    claimPendingDetail = () => {
+        const item = claimDetail('word', id => (this.props.leads || []).find(x => String(x.name).toLowerCase() === id.toLowerCase()));
+        if (item) { this.setPostUrls(item.posturls || [], item.name); }
+    };
+
     componentDidMount() {
+        this._unwatchDetail = onDetailRequest(this.claimPendingDetail);
+        this.claimPendingDetail();
         store.dispatch(setIsPasswordChanged());
         this.loadInitialData();
     }
 
     componentDidUpdate(prevProps) {
+        if (prevProps.leads !== this.props.leads) this.claimPendingDetail();
         if (!this.state.word) {
             const { leads, monitoredKeywords } = this.props;
             if (prevProps.leads !== leads || prevProps.monitoredKeywords !== monitoredKeywords) {
@@ -74,6 +85,7 @@ class Dashboard extends Component {
     }
 
     componentWillUnmount() {
+        if (this._unwatchDetail) this._unwatchDetail();
         if (this.loadingTimer) clearTimeout(this.loadingTimer);
     }
 
@@ -121,19 +133,12 @@ class Dashboard extends Component {
         const { word, postUrls, filteredLeads, selectedMapCountry } = this.state;
 
         return {
-            stats: {
-                label: 'Statistics',
-                icon: 'bar_chart',
-                tooltip: 'Carousel: Threats Watcher · Ransomware · CVE - auto-advances every 3 minutes',
-                children: <ThreatsWatcherStatistics setPostUrls={this.setPostUrls} />,
-            },
-
             cloud: {
                 label: 'Word Cloud',
                 icon: 'cloud',
                 tooltip: 'Visualize trending cybersecurity keywords - size reflects frequency',
                 children: (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
+                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: 12 }}>
                         <WordCloud setPostUrls={this.setPostUrls} filteredData={filteredLeads.length > 0 ? filteredLeads : null} fromSourceFilter={this.state.fromSourceFilter} selectedWord={this.state.selectedWord} />
                     </div>
                 ),
@@ -252,6 +257,9 @@ class Dashboard extends Component {
         return (
             <Fragment>
                 <WeeklyBreaking />
+
+                <ModuleTabs tabs={THREATS_WATCHER_TABS} />
+                <SurveillanceKpis />
 
                 <PanelGrid
                     panels={this.buildPanels()}

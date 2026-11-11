@@ -5,18 +5,19 @@ import ThreatsMonitored from "./ThreatsMonitored";
 import DnsMonitored from "./DnsMonitored";
 import KeywordMonitored from "./KeywordMonitored";
 import TableManager from '../common/TableManager';
-import DnsFinderStats from "./DnsFinderStats";
 import PanelGrid from '../common/PanelGrid';
 import { LAYOUT_PRESETS } from '../../config/layoutPresets';
+import ModuleTabs from '../common/ModuleTabs';
+import { DNS_FINDER_TABS, DnsSurveillanceKpis } from './StatisticsPage';
+import { claimFilters, withFilterDefaults } from '../common/pendingFilters';
 
 const DEFAULT_LAYOUT = [
-    { i: 'stats',    x: 0, y: 0,  w: 12, h: 8,  minW: 6, minH: 3 },
     { i: 'threats',  x: 0, y: 8,  w: 12, h: 11, minW: 6, minH: 6 },
     { i: 'dns',      x: 0, y: 22, w: 6,  h: 11, minW: 3, minH: 5 },
     { i: 'keywords', x: 6, y: 22, w: 6,  h: 11, minW: 3, minH: 5 },
 ];
 
-const DEFAULT_ACTIVE = ['stats', 'threats', 'dns', 'keywords'];
+const DEFAULT_ACTIVE = ['threats', 'dns', 'keywords'];
 
 const SOURCE_OPTIONS = [
     { value: 'dnstwist', label: 'Dnstwist Algorithm' },
@@ -36,6 +37,8 @@ const STATUS_OPTIONS = [
 class Dashboard extends Component {
     constructor(props) {
         super(props);
+        // Filter requested by a click on the Statistics tab (see common/pendingFilters)
+        this.requestedFilters = claimFilters('dns_finder');
         this.state = {
             globalFilters: {
                 search: '',
@@ -236,23 +239,13 @@ class Dashboard extends Component {
     buildPanels() {
         const { globalFilters, filteredThreats, filteredThreatsSource } = this.state;
         const { threatsMonitored } = this.props;
-        const filterConfig = this.getFilterConfig();
+        const filterConfig = withFilterDefaults(this.getFilterConfig(), this.requestedFilters);
         const hasActiveFilters = Object.values(globalFilters).some(val => val !== '');
         const filteredThreatsIsFresh = filteredThreatsSource === threatsMonitored;
         const dataToPass = (hasActiveFilters && filteredThreatsIsFresh) ? filteredThreats : null;
         const hasDynamicFilter = Boolean(globalFilters.source);
 
         return {
-            stats: {
-                label: 'Statistics',
-                icon: 'bar_chart',
-                tooltip: 'Overview of DNS threats across all three detection sources',
-                children: (
-                    <div style={{ padding: '12px 16px', height: '100%', overflowY: 'auto' }}>
-                        <DnsFinderStats />
-                    </div>
-                ),
-            },
             threats: {
                 label: 'DNS Threats Monitored',
                 icon: 'link',
@@ -260,6 +253,7 @@ class Dashboard extends Component {
                 children: (
                     <div style={{ padding: '12px 16px', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                         <TableManager
+                            revealFilters={!!this.requestedFilters}
                             data={threatsMonitored}
                             filterConfig={filterConfig}
                             onFiltersChange={this.handleFilterChange}
@@ -310,6 +304,8 @@ class Dashboard extends Component {
     render() {
         return (
             <Fragment>
+                <ModuleTabs tabs={DNS_FINDER_TABS} />
+                <DnsSurveillanceKpis />
                 <PanelGrid
                     panels={this.buildPanels()}
                     defaultLayout={DEFAULT_LAYOUT}

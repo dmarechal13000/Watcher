@@ -2,17 +2,18 @@ import React, { Component, Fragment } from 'react';
 import { connect } from 'react-redux';
 import { getSites } from "../../actions/SiteMonitoring";
 import SuspiciousSites from "./SuspiciousSites";
-import SiteStats from "./SiteStats";
 import TableManager from '../common/TableManager';
 import PanelGrid from '../common/PanelGrid';
 import { LAYOUT_PRESETS } from '../../config/layoutPresets';
+import ModuleTabs from '../common/ModuleTabs';
+import { SITE_MONITORING_TABS, SiteSurveillanceKpis } from './StatisticsPage';
+import { claimFilters, withFilterDefaults } from '../common/pendingFilters';
 
 const DEFAULT_LAYOUT = [
-    { i: 'stats', x: 0, y: 0,  w: 12, h: 9,  minW: 6, minH: 3 },
     { i: 'sites', x: 0, y: 9,  w: 12, h: 11, minW: 5, minH: 6 },
 ];
 
-const DEFAULT_ACTIVE = ['stats', 'sites'];
+const DEFAULT_ACTIVE = ['sites'];
 
 const FILTER_CONFIG = [
     {
@@ -85,6 +86,8 @@ const LEGITIMACY_LABELS = {
 class Dashboard extends Component {
     constructor(props) {
         super(props);
+        // Filter requested by a click on the Statistics tab (see common/pendingFilters)
+        this.requestedFilters = claimFilters('website_monitoring');
         this.state = {
             globalFilters: {
                 search: '',
@@ -188,25 +191,17 @@ class Dashboard extends Component {
     buildPanels() {
         const { globalFilters, filteredSites } = this.state;
         const { sites } = this.props;
-        const filterConfig = this.getFilterConfig();
+        const filterConfig = withFilterDefaults(this.getFilterConfig(), this.requestedFilters);
         const hasActiveFilters = Object.values(globalFilters).some(val => val !== '');
 
         return {
-            stats: {
-                label: 'Statistics',
-                icon: 'bar_chart',
-                children: (
-                    <div style={{ padding: '12px 16px', height: '100%', overflowY: 'auto' }}>
-                        <SiteStats />
-                    </div>
-                ),
-            },
             sites: {
                 label: 'Suspicious Websites Monitored',
                 icon: 'link',
                 children: (
                     <div style={{ padding: '12px 16px', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                         <TableManager
+                            revealFilters={!!this.requestedFilters}
                             data={sites}
                             filterConfig={filterConfig}
                             onFiltersChange={this.handleFilterChange}
@@ -240,6 +235,8 @@ class Dashboard extends Component {
     render() {
         return (
             <Fragment>
+                <ModuleTabs tabs={SITE_MONITORING_TABS} />
+                <SiteSurveillanceKpis />
                 <PanelGrid
                     panels={this.buildPanels()}
                     defaultLayout={DEFAULT_LAYOUT}
