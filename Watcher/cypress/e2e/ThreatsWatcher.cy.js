@@ -197,8 +197,9 @@ describe('Threats Watcher - E2E Test Suite', () => {
       }
     });
 
-    // Navigation check
-    cy.url().then((currentUrl) => {
+    // Navigation check. A long timeout: the previous test may have left a heavy page (Statistics
+    // tab charts) still rendering, during which the URL is briefly unavailable to Cypress.
+    cy.url({ timeout: 15000 }).then((currentUrl) => {
       if (!currentUrl.includes('/#/') || currentUrl.includes('/data_leak') || currentUrl.includes('/website_monitoring') || currentUrl.includes('/dns_finder')) {
         cy.log('Redirecting back to Threats Watcher homepage...');
         cy.visit('/#/', { failOnStatusCode: false });
@@ -208,7 +209,7 @@ describe('Threats Watcher - E2E Test Suite', () => {
       }
     });
 
-    cy.url().should('include', '#/');
+    cy.url({ timeout: 15000 }).should('include', '#/');
     cy.log('Page ready with session maintained');
   });
 
@@ -463,8 +464,8 @@ describe('Threats Watcher - E2E Test Suite', () => {
           cy.wrap(wordElements.first()).click();
           cy.wait(1000);
           
-          cy.get('.card.bg-secondary.border-0.shadow-lg').should('exist').within(() => {
-            cy.get('.bg-primary').should('contain', 'Word Summary for');
+          cy.get('.word-summary').should('exist').within(() => {
+            cy.get('.wt-summary-head').should('contain', 'Word Summary for');
           });
         }
       });
@@ -907,65 +908,44 @@ describe('Threats Watcher - E2E Test Suite', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  describe('Statistics Dashboard (Carousel)', () => {
-    it('should display the Statistics panel', () => {
-      cy.contains('.card-header', 'Statistics', { timeout: 15000 })
-        .closest('.card.h-100.shadow-sm')
-        .should('exist');
+  describe('Statistics tab', () => {
+    it('should show the Surveillance and Statistics tabs on the module', () => {
+      cy.get('.wt-module-tab', { timeout: 15000 }).should('have.length', 2);
+      cy.contains('.wt-module-tab', 'Surveillance').should('have.class', 'is-active');
+      cy.contains('.wt-module-tab', 'Statistics').should('exist');
     });
 
-    it('should display KPI cards inside the statistics panel', () => {
-      cy.contains('.card-header', 'Statistics')
-        .closest('.card.h-100.shadow-sm')
-        .within(() => {
-          cy.get('.card.border-0.shadow-sm', { timeout: 10000 }).should('have.length.at.least', 3);
-        });
+    it('should keep a compact KPI row on the Surveillance tab', () => {
+      cy.get('.wt-kpi-strip .wt-stat', { timeout: 15000 }).should('have.length', 4);
+      cy.get('.wt-kpi-strip .wt-stat-value').first().should('exist');
+      cy.contains('.card-header', 'Statistics').should('not.exist');
     });
 
-    it('should display KPI values in stat cards', () => {
-      cy.contains('.card-header', 'Statistics')
-        .closest('.card.h-100.shadow-sm')
-        .within(() => {
-          cy.get('.card.border-0.shadow-sm').first().within(() => {
-            cy.get('.text-white.fw-bold').should('exist');
-          });
-        });
+    it('should open the Statistics tab with KPIs and the three sections', () => {
+      cy.contains('.wt-module-tab', 'Statistics').click();
+      cy.url().should('include', '/threats_watcher/statistics');
+      cy.get('.wt-stat', { timeout: 15000 }).should('have.length.at.least', 6);
+      cy.get('.wt-stat').first().within(() => {
+        cy.get('.wt-stat-value').should('exist');
+      });
+      cy.get('.wt-stats-section-title').should('contain', 'Trending words')
+        .and('contain', 'Vulnerabilities')
+        .and('contain', 'Ransomware');
     });
 
-    it('should display carousel navigation dots', () => {
-      cy.contains('.card-header', 'Statistics')
-        .closest('.card.h-100.shadow-sm')
-        .within(() => {
-          // Carousel has nav dot buttons
-          cy.get('button[style*="border-radius"], [class*="dot"], [class*="indicator"]').should('have.length.at.least', 2);
-        });
+    it('should change the statistics period', () => {
+      cy.visit('/#/threats_watcher/statistics');
+      cy.get('.wt-module-tabs [role="radiogroup"] button', { timeout: 15000 }).should('have.length', 3);
+      cy.contains('.wt-module-tabs [role="radiogroup"] button', '7 days').click()
+        .should('have.attr', 'aria-checked', 'true');
+      cy.get('.wt-chart-total').first().should('contain', 'last 7 days');
     });
 
-    it('should display slide label for Threats Watcher stats', () => {
-      cy.contains('.card-header', 'Statistics')
-        .closest('.card.h-100.shadow-sm')
-        .within(() => {
-          cy.contains('Threats Watcher').should('exist');
-        });
-    });
-
-    it('should display progress bar at the bottom of stats card', () => {
-      cy.contains('.card-header', 'Statistics')
-        .closest('.card.h-100.shadow-sm')
-        .within(() => {
-          cy.get('[style*="position: absolute"], .position-absolute').should('exist');
-        });
-    });
-
-    it('should display Ransomware label on second slide', () => {
-      cy.contains('.card-header', 'Statistics')
-        .closest('.card.h-100.shadow-sm')
-        .within(() => {
-          // Navigate to second dot
-          cy.get('button[style*="border-radius"]').eq(1).click({ force: true });
-          cy.wait(600);
-          cy.contains('Ransomware').should('exist');
-        });
+    it('should go back to the Surveillance tab', () => {
+      cy.visit('/#/threats_watcher/statistics');
+      cy.contains('.wt-module-tab', 'Surveillance', { timeout: 15000 }).click();
+      cy.get('.react-grid-item', { timeout: 15000 }).should('exist');
+      cy.contains('.wt-module-tab', 'Surveillance').should('have.class', 'is-active');
     });
   });
 

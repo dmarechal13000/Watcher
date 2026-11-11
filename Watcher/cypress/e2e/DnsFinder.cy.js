@@ -290,7 +290,9 @@ describe('DNS Threats Monitored - E2E Test Suite', () => {
     it('should display main sections with ResizableContainers', () => {
       cy.get('.container-fluid', { timeout: 15000 }).should('exist');
 
-      cy.contains('.card-header', 'Statistics', { timeout: 15000 }).should('exist');
+      // Statistics live on their own tab; the Surveillance tab keeps a KPI row
+      cy.contains('.wt-module-tab', 'Statistics', { timeout: 15000 }).should('exist');
+      cy.get('.wt-kpi-strip .wt-stat').should('have.length', 4);
       cy.contains('.card-header', 'DNS Threats Monitored').should('exist');
       cy.contains('.card-header', 'Corporate DNS Assets Monitored').should('exist');
       cy.contains('.card-header', 'Corporate Keywords Monitored').should('exist');

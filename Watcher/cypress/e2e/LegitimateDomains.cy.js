@@ -162,7 +162,7 @@ describe('Legitimate Domains - E2E Test Suite', () => {
     it('should display LegitimateStats dashboard', () => {
       cy.get('.container-fluid', { timeout: 15000 }).should('exist');
 
-      cy.get('.card.border-0.shadow-sm', { timeout: 15000 }).should('have.length', 4);
+      cy.get('.wt-stat', { timeout: 15000 }).should('have.length', 4);
 
       cy.get('body').then(($body) => {
         const bodyText = $body.text();
@@ -201,7 +201,8 @@ describe('Legitimate Domains - E2E Test Suite', () => {
       cy.get('a[href="/#/"], a:contains("Watcher"), .navbar-brand').first().click();
       cy.url().should('include', '#/');
 
-      cy.get('a:contains("Legitimate Domains"), a[href*="legitimate_domains"]').should('exist').click();
+      // The sidebar and the Overview cards both link to the module: click the first one
+      cy.get('a:contains("Legitimate Domains"), a[href*="legitimate_domains"]').should('exist').first().click();
       cy.url().should('include', 'legitimate_domains');
 
       cy.get('.navbar').should('exist');
@@ -210,11 +211,11 @@ describe('Legitimate Domains - E2E Test Suite', () => {
 
   describe('Statistics Dashboard', () => {
     it('should display all stat cards', () => {
-      cy.get('.card.border-0.shadow-sm').should('have.length', 4);
+      cy.get('.wt-stat').should('have.length', 4);
     });
 
     it('should display correct stat card icons', () => {
-      cy.get('.container-fluid .card.border-0.shadow-sm .material-icons').then(($icons) => {
+      cy.get('.container-fluid .wt-stat .material-icons').then(($icons) => {
         const iconTexts = $icons.toArray().map(icon => Cypress.$(icon).text());
         const validIcons = iconTexts.filter(text => 
           text.includes('link') || text.includes('check_circle') ||
@@ -225,7 +226,7 @@ describe('Legitimate Domains - E2E Test Suite', () => {
     });
 
     it('should display stat card titles', () => {
-      cy.get('.card.border-0.shadow-sm').each(($card) => {
+      cy.get('.wt-stat').each(($card) => {
         cy.wrap($card).within(() => {
           cy.get('.text-uppercase').should('exist');
         });
@@ -243,36 +244,36 @@ describe('Legitimate Domains - E2E Test Suite', () => {
       cy.get('input[placeholder*="Search"]').clear().type('watcher-company');
       cy.wait(1000);
 
-      cy.get('.card.border-0.shadow-sm').should('exist');
+      cy.get('.wt-stat').should('exist');
     });
 
     it('should display correct statistics counts', () => {
-      cy.get('.card.border-0.shadow-sm').first().within(() => {
-        cy.get('.text-white.fw-bold').first().invoke('text').then((text) => {
+      cy.get('.wt-stat').first().within(() => {
+        cy.get('.wt-stat-value').first().invoke('text').then((text) => {
           const num = parseInt(text.trim().replace(/,/g, ''));
           cy.log(`Total domains count: ${num}`);
           expect(num).to.be.at.least(0);
         });
       });
 
-      cy.get('.card.border-0.shadow-sm').eq(1).within(() => {
-        cy.get('.text-white.fw-bold').first().invoke('text').then((text) => {
+      cy.get('.wt-stat').eq(1).within(() => {
+        cy.get('.wt-stat-value').first().invoke('text').then((text) => {
           const num = parseInt(text.trim().replace(/,/g, ''));
           cy.log(`Repurchased domains count: ${num}`);
           expect(num).to.be.at.least(0);
         });
       });
 
-      cy.get('.card.border-0.shadow-sm').eq(2).within(() => {
-        cy.get('.text-white.fw-bold').first().invoke('text').then((text) => {
+      cy.get('.wt-stat').eq(2).within(() => {
+        cy.get('.wt-stat-value').first().invoke('text').then((text) => {
           const num = parseInt(text.trim().replace(/,/g, ''));
           cy.log(`Expired domains count: ${num}`);
           expect(num).to.be.at.least(0);
         });
       });
 
-      cy.get('.card.border-0.shadow-sm').eq(3).within(() => {
-        cy.get('.text-white.fw-bold').first().invoke('text').then((text) => {
+      cy.get('.wt-stat').eq(3).within(() => {
+        cy.get('.wt-stat-value').first().invoke('text').then((text) => {
           const num = parseInt(text.trim().replace(/,/g, ''));
           cy.log(`Expiring soon domains count: ${num}`);
           expect(num).to.be.at.least(0);
@@ -596,8 +597,8 @@ describe('Legitimate Domains - E2E Test Suite', () => {
 
       cy.get('table tbody tr').should('have.length.at.least', 1);
 
-      cy.get('.card.border-0.shadow-sm').first().within(() => {
-        cy.get('.text-white.fw-bold').first().invoke('text').then((text) => {
+      cy.get('.wt-stat').first().within(() => {
+        cy.get('.wt-stat-value').first().invoke('text').then((text) => {
           const num = parseInt(text.replace(/,/g, ''));
           cy.log(`Filtered domains count: ${num}`);
           expect(num).to.be.at.least(0);
@@ -624,7 +625,7 @@ describe('Legitimate Domains - E2E Test Suite', () => {
       cy.get('.container-fluid').should('exist');
       cy.get('.row').should('have.length.at.least', 1);
 
-      cy.get('.card.border-0.shadow-sm').should('have.length', 4);
+      cy.get('.wt-stat').should('have.length', 4);
 
       cy.get('table', { timeout: 10000 }).should('exist');
     });
@@ -676,7 +677,7 @@ describe('Legitimate Domains - E2E Test Suite', () => {
     it('should complete basic workflow integration test', () => {
       cy.get('body').should('be.visible');
       cy.get('.container-fluid').should('exist');
-      cy.get('.card.border-0.shadow-sm').should('have.length', 4);
+      cy.get('.wt-stat').should('have.length', 4);
       cy.get('table').should('exist');
 
       cy.get('body').then(($body) => {

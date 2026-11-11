@@ -291,7 +291,7 @@ describe('Site Monitoring - E2E Test Suite', () => {
     it('should display SiteStats dashboard', () => {
       cy.get('.container-fluid', { timeout: 15000 }).should('exist');
       
-      cy.get('.card.border-0.shadow-sm', { timeout: 15000 }).should('have.length.at.least', 4);
+      cy.get('.wt-stat', { timeout: 15000 }).should('have.length.at.least', 4);
       
       cy.get('body').then(($body) => {
         const bodyText = $body.text();
@@ -330,7 +330,8 @@ describe('Site Monitoring - E2E Test Suite', () => {
       cy.get('a[href="/#/"], a:contains("Watcher"), .navbar-brand').first().click();
       cy.url().should('include', '#/');
       
-      cy.get('a:contains("Website Monitoring"), a[href*="website_monitoring"]').should('exist').click();
+      // The sidebar and the Overview cards both link to the module: click the first one
+      cy.get('a:contains("Website Monitoring"), a[href*="website_monitoring"]').should('exist').first().click();
       cy.url().should('include', 'website_monitoring');
       
       cy.get('.navbar').should('exist');
@@ -595,12 +596,13 @@ describe('Site Monitoring - E2E Test Suite', () => {
         }).first().click({ force: true });
       });
       
-      cy.get('.modal', { timeout: 10000 }).should('be.visible');
+      // Technical details open in the side panel (DetailDrawer / Bootstrap offcanvas)
+      cy.get('.wt-drawer', { timeout: 10000 }).should('be.visible');
       
-      cy.get('.modal').within(() => {
-        cy.get('.modal-title, .modal-header').should('exist');
+      cy.get('.wt-drawer').within(() => {
+        cy.get('.offcanvas-title, .offcanvas-header').should('exist');
         
-        cy.get('.modal-body').then(($body) => {
+        cy.get('.offcanvas-body').then(($body) => {
           const bodyText = $body.text();
           const hasTechnicalInfo = bodyText.includes('IP') || 
                                    bodyText.includes('MX') || 
@@ -610,13 +612,13 @@ describe('Site Monitoring - E2E Test Suite', () => {
         });
       });
       
-      cy.get('button:contains("Close")').first().click({ force: true });
+      cy.get('.wt-drawer .btn-close').first().click({ force: true });
     });
   });
 
   describe('Statistics Dashboard', () => {
     it('should display all stat cards', () => {
-      cy.get('.card.border-0.shadow-sm').should('have.length.at.least', 4);
+      cy.get('.wt-stat').should('have.length.at.least', 4);
     });
 
     it('should display correct stat card icons', () => {
@@ -628,7 +630,7 @@ describe('Site Monitoring - E2E Test Suite', () => {
     });
 
     it('should display stat card titles', () => {
-      cy.get('.card.border-0.shadow-sm').each(($card) => {
+      cy.get('.wt-stat').each(($card) => {
         cy.wrap($card).within(() => {
           cy.get('.text-uppercase').should('exist');
         });
@@ -646,7 +648,7 @@ describe('Site Monitoring - E2E Test Suite', () => {
       cy.get('input[placeholder*="Search"]').clear().type('malicious');
       cy.wait(1000);
       
-      cy.get('.card.border-0.shadow-sm').should('exist');
+      cy.get('.wt-stat').should('exist');
     });
   });
 
@@ -660,9 +662,10 @@ describe('Site Monitoring - E2E Test Suite', () => {
 
     it('should verify layout structure specific to Site Monitoring', () => {
       cy.get('.container-fluid').should('exist');
-      cy.get('.row').should('have.length.at.least', 2);
+      cy.get('.wt-module-tab').should('have.length', 2);
+      cy.get('.wt-kpi-strip').should('exist');
       
-      cy.get('.card.border-0.shadow-sm').should('have.length.at.least', 4);
+      cy.get('.wt-stat').should('have.length.at.least', 4);
       
       cy.get('table', { timeout: 10000 }).should('exist');
     });
@@ -704,7 +707,8 @@ describe('Site Monitoring - E2E Test Suite', () => {
       }).as('emptyAlerts');
 
       cy.reload();
-      cy.wait(['@emptySites', '@emptyAlerts']);
+      // Alerts are only fetched for a selected site (or on the Statistics tab), not on page load
+      cy.wait('@emptySites');
       
       cy.get('body').should('be.visible');
       cy.get('.container-fluid').should('exist');
@@ -766,7 +770,7 @@ describe('Site Monitoring - E2E Test Suite', () => {
 
     it('should verify all major components are loaded', () => {
       cy.get('.container-fluid').should('exist');
-      cy.get('.card.border-0.shadow-sm').should('have.length.at.least', 4);
+      cy.get('.wt-stat').should('have.length.at.least', 4);
       cy.get('table.table-striped, table.table').should('exist');
       
       cy.get('h4').should('exist');
