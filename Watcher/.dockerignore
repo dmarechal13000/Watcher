@@ -1,4 +1,27 @@
+# Documentation & repo assets (not needed in the image)
 docs/
 static/
-Dockerfile
 README.md
+Dockerfile
+.dockerignore
+
+# VCS
+.git
+.gitignore
+
+# Node dependencies (installed inside the frontend stage with npm ci)
+**/node_modules
+
+# E2E tests
+cypress/
+cypress.config.js
+
+# Local Django artifacts
+Watcher/static/
+Watcher/logs/
+**/__pycache__
+**/*.pyc
+
+# Local secrets
+**/.env
+**/.env.*

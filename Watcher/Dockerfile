@@ -109,8 +109,9 @@ COPY --from=backend-builder /usr/local/share/nltk_data /usr/local/share/nltk_dat
 # Copy application code
 COPY . .
 
-# Copy frontend build output
-COPY --from=frontend-builder /frontend/ /app/Watcher/static
+# Copy frontend build output only (webpack output dir), never the whole
+# frontend stage: anything placed under STATIC_ROOT is served publicly by WhiteNoise
+COPY --from=frontend-builder /frontend/Watcher/frontend/static/frontend/ /app/Watcher/frontend/static/frontend/
 
 WORKDIR /app/Watcher
 
