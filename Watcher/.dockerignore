@@ -16,6 +16,9 @@ Dockerfile
 cypress/
 cypress.config.js
 
+# Webpack output (built inside the frontend stage, never taken from the host)
+Watcher/frontend/static/frontend/main.js*
+
 # Local Django artifacts
 Watcher/static/
 Watcher/logs/

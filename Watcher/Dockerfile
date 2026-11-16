@@ -16,17 +16,23 @@ ARG NO_PROXY
 #################################################
 #                FRONTEND BUILD                #
 #################################################
-FROM node:18-bookworm-slim AS frontend-builder
+# Node 22 required: @babel/core 8 needs node ^22.18
+FROM node:22-bookworm-slim AS frontend-builder
+
+# Cypress is a devDependency used for e2e tests only: skip its ~500 MB binary
+ENV CYPRESS_INSTALL_BINARY=0
 
 WORKDIR /frontend
 
 COPY package*.json .npmrc ./
 RUN npm ci
 
-COPY . .
+# Only what webpack needs to build the bundle
+COPY webpack.config.js .babelrc ./
+COPY Watcher/frontend/ ./Watcher/frontend/
 
-# Install ReactJs dependencies
-RUN npm install
+# Build the React bundle into Watcher/frontend/static/frontend/
+RUN npm run build
 
 #################################################
 #                BACKEND BUILD                 #

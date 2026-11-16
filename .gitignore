@@ -329,3 +329,8 @@ db_watcher/
 Watcher/Watcher/static/
 .worktrees/
 .superpowers/
+
+# Webpack bundle: built by `npm run build` / inside the Docker image, not versioned
+Watcher/Watcher/frontend/static/frontend/main.js
+Watcher/Watcher/frontend/static/frontend/main.js.map
+Watcher/Watcher/frontend/static/frontend/main.js.LICENSE.txt

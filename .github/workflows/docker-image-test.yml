@@ -24,20 +24,29 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
     - name: Install dependencies
       working-directory: ./Watcher/
       run: |
         sudo apt update && sudo apt install -y libsasl2-dev python3-dev libldap2-dev libssl-dev default-libmysqlclient-dev &
         echo "127.0.0.1 db_watcher" | sudo tee -a /etc/hosts
         wait
-        
+
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install --extra-index-url https://download.pytorch.org/whl/cpu torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0
         npm install
         npx cypress install
-    
+
+    - name: Build front-end bundle
+      working-directory: ./Watcher/
+      run: npm run build
+
     - name: Run back-end tests
       working-directory: ./Watcher/Watcher
       run: python manage.py test
