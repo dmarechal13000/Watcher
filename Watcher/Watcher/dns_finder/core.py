@@ -1,6 +1,5 @@
 # coding=utf-8
 import os
-import six
 import subprocess
 import json
 import logging
@@ -478,14 +477,14 @@ def check_dnstwist(dns_monitored):
     if os.path.exists(filepath_out):
         os.remove(filepath_out)
 
-    subprocess.check_output(map(six.text_type, [
+    subprocess.check_output([
         'dnstwist',
         '--registered',
         '--format={}'.format("json"),
         '--output={}'.format(filepath_out),
         '--tld={}'.format(filepath_tlds),
         '{}'.format(dns_monitored.domain_name),
-    ]))
+    ])
 
     with open('dns_finder/data/list.json') as json_file:
         try:
