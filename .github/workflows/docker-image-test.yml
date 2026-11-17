@@ -68,6 +68,7 @@ jobs:
       env:
         DB_USER: root
         DB_PASSWORD: root
+        DJANGO_DEBUG: "True"
 
     - name: Run Cypress e2e tests
       working-directory: ./Watcher

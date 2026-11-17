@@ -16,13 +16,23 @@ class SettingsConfigurationTest(TestCase):
 
     def test_debug_mode_configuration(self):
         """Test DEBUG mode configuration from environment."""
+        def debug_value():
+            return os.environ.get('DJANGO_DEBUG', 'False').strip().lower() == 'true'
+
         with patch.dict(os.environ, {'DJANGO_DEBUG': 'False'}):
-            debug_value = os.environ.get('DJANGO_DEBUG', '') != 'False'
-            self.assertFalse(debug_value)
-        
+            self.assertFalse(debug_value())
+
         with patch.dict(os.environ, {'DJANGO_DEBUG': 'True'}):
-            debug_value = os.environ.get('DJANGO_DEBUG', '') != 'False'
-            self.assertTrue(debug_value)
+            self.assertTrue(debug_value())
+
+        with patch.dict(os.environ, {'DJANGO_DEBUG': 'true\r'}):
+            self.assertTrue(debug_value())
+
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertFalse(debug_value(), 'DEBUG must be off when DJANGO_DEBUG is unset')
+
+        with patch.dict(os.environ, {'DJANGO_DEBUG': ''}):
+            self.assertFalse(debug_value(), 'DEBUG must be off when DJANGO_DEBUG is empty')
 
     def test_installed_apps_configuration(self):
         """Test installed apps are properly configured."""

@@ -69,6 +69,7 @@ jobs:
       env:
         DB_USER: root
         DB_PASSWORD: root
+        DJANGO_DEBUG: "True"
 
   build:
     runs-on: ubuntu-latest

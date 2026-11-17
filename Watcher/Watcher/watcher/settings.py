@@ -61,8 +61,8 @@ CONNECTORS_ENCRYPTION_KEY = os.environ.get('CONNECTORS_ENCRYPTION_KEY', 'mGcn94A
 if CONNECTORS_ENCRYPTION_KEY == '':
     CONNECTORS_ENCRYPTION_KEY = 'mGcn94AWsOHh8i4s0yHshr4wcoPnmAnsqZXZPcrRbtY='
 
-# SECURITY WARNING: In production please put DJANGO_DEBUG environment variable to False in the .env file!
-DEBUG = os.environ.get('DJANGO_DEBUG', '') != 'False'
+# SECURITY WARNING: DEBUG is off unless DJANGO_DEBUG is explicitly set to True (local development only)
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False').strip().lower() == 'true'
 
 ALLOWED_HOSTS = [
     '0.0.0.0',

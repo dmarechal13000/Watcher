@@ -58,7 +58,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv (pinned)
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv:0.13.8 /uv /uvx /usr/local/bin/
 
 COPY requirements.txt .
 
@@ -102,10 +102,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Rust (build only)
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-
 # Copy Python environment from builder
 COPY --from=backend-builder /usr/local /usr/local
 
@@ -127,4 +123,5 @@ RUN python manage.py collectstatic --noinput
 
 EXPOSE 9002
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:9002"]
+# Gunicorn settings (single worker, threads) live in gunicorn.conf.py
+CMD ["gunicorn"]
