@@ -325,6 +325,7 @@ SKILLS.md
 deployment/certificates/certfile.pem
 deployment/certificates/keyfile.pem
 deployment/certificates/rootcafile.pem
+deployment/certificates/*/
 db_watcher/
 Watcher/Watcher/static/
 .worktrees/
@@ -334,3 +335,6 @@ Watcher/Watcher/static/
 Watcher/Watcher/frontend/static/frontend/main.js
 Watcher/Watcher/frontend/static/frontend/main.js.map
 Watcher/Watcher/frontend/static/frontend/main.js.LICENSE.txt
+
+# Local environment files (templates are the committed .env.example files)
+.env

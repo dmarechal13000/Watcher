@@ -31,6 +31,9 @@ services:
       https_proxy: "${HTTPS_PROXY}"
       no_proxy: "${NO_PROXY},searxng,db_watcher,certstream"
       REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      # CA_PATH in deployment/.env is the HOST certificates dir; Django needs the
+      # in-container CA bundle (system roots + custom-ca.crt after update-ca-certificates)
+      CA_PATH: /etc/ssl/certs/ca-certificates.crt
     networks:
       - watcher_network
 
