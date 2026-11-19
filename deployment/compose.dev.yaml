@@ -1,0 +1,56 @@
+#############################################
+# LOCAL DEVELOPMENT OVERRIDE
+#
+# Usage (from deployment/):  make dev        /  make dev-down
+# Equivalent to:
+#   docker compose -f docker-compose.yml -f compose.dev.yaml --env-file .env up -d --build
+#
+# Differences with the production stack:
+# - watcher is built locally from ../Watcher (image watcher:dev) instead of
+#   pulled from GHCR, and runs Django's runserver with auto-reload on the
+#   bind-mounted sources (edit Python files -> server restarts).
+# - frontend runs webpack in watch mode on the same sources
+#   (edit React files -> bundle rebuilt, refresh the browser).
+# - DJANGO_DEBUG is forced to True for the watcher container only.
+#
+# Rebuild the watcher image after changing requirements.txt or the
+# Dockerfile: `make dev` does it (docker compose up --build).
+#############################################
+services:
+
+  watcher:
+    image: watcher:dev
+    build:
+      context: ${WATCHER_PATH}/Watcher
+    command: bash -c 'update-ca-certificates && python manage.py runserver 0.0.0.0:9002'
+    environment:
+      DJANGO_DEBUG: "True"
+    volumes:
+      # Django sources (includes frontend/static/frontend/ written by the frontend service)
+      - ${WATCHER_PATH}/Watcher/Watcher:/app/Watcher
+      # Keep app log files inside a volume rather than root-owned files on the host
+      - watcher_dev_logs:/app/Watcher/logs
+
+  frontend:
+    image: node:22-bookworm-slim
+    container_name: watcher_frontend
+    init: true
+    restart: unless-stopped
+    # Run as the host user so the generated bundle and node_modules stay editable on the host
+    user: "${DEV_UID:-1000}:${DEV_GID:-1000}"
+    working_dir: /frontend
+    environment:
+      CYPRESS_INSTALL_BINARY: "0"
+      npm_config_cache: /tmp/.npm
+      # Set WATCHPACK_POLLING=true if file changes are not picked up
+      # (e.g. sources on a Windows filesystem mounted into Docker)
+      WATCHPACK_POLLING: "${WATCHPACK_POLLING:-false}"
+    # Install dependencies only when package-lock.json changed since the last install
+    command: sh -c '[ node_modules/.package-lock.json -nt package-lock.json ] || npm ci --no-audit --no-fund; exec npm run dev'
+    volumes:
+      - ${WATCHER_PATH}/Watcher:/frontend
+    networks:
+      - watcher_network
+
+volumes:
+  watcher_dev_logs: {}
