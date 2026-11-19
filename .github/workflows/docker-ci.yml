@@ -1,0 +1,121 @@
+name: Build, test and publish the Docker image
+
+# Reusable workflow called by docker-image-latest.yml (master) and
+# docker-image-test.yml (test).
+#
+# The image is built once, then tested as-is (back-end tests run inside
+# it, Cypress runs against it started with its production command), and
+# that exact image is pushed. Nothing is installed on the runner besides
+# Docker, so CI tests what is shipped.
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        description: Tag to publish on ghcr.io/thalesgroup-cert/watcher
+        required: true
+        type: string
+
+env:
+  CI_IMAGE: watcher:ci
+
+jobs:
+  build-test-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    services:
+      mysql:
+        image: mysql:8.0.40
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: db_watcher
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Extract metadata (tags, labels)
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/thalesgroup-cert/watcher
+        tags: |
+          type=raw,value=${{ inputs.image_tag }}
+
+    - name: Build image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./Watcher
+        load: true
+        tags: ${{ env.CI_IMAGE }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    # The MySQL service is published on the runner's localhost:3306;
+    # containers use --network host to reach it.
+    - name: Write the container environment file
+      run: |
+        cat > "$RUNNER_TEMP/watcher.env" <<'EOF'
+        DB_HOST=127.0.0.1
+        DB_USER=root
+        DB_PASSWORD=root
+        DJANGO_SECRET_KEY=ci-only-secret
+        EOF
+
+    - name: Run back-end tests (inside the image)
+      run: docker run --rm --network host --env-file "$RUNNER_TEMP/watcher.env" "$CI_IMAGE" python manage.py test --noinput
+
+    - name: Start Watcher (production command)
+      run: |
+        docker run --rm --network host --env-file "$RUNNER_TEMP/watcher.env" "$CI_IMAGE" python manage.py migrate --noinput
+        docker run --rm --network host --env-file "$RUNNER_TEMP/watcher.env" "$CI_IMAGE" python manage.py shell -c "
+        from django.contrib.auth.models import User
+        User.objects.create_superuser('Watcher', 'cypress@watcher.com', 'Watcher')
+        "
+        docker run -d --name watcher --network host --env-file "$RUNNER_TEMP/watcher.env" "$CI_IMAGE"
+        timeout 120 bash -c 'until curl -sf -o /dev/null http://127.0.0.1:9002/; do sleep 2; done'
+
+    - name: Run Cypress e2e tests (against the container)
+      run: |
+        docker run --rm --network host \
+          -v "$PWD/Watcher:/e2e" -w /e2e \
+          cypress/included:15.19.0 \
+          --config baseUrl=http://127.0.0.1:9002
+
+    - name: Show Watcher logs
+      if: failure()
+      run: docker logs watcher || true
+
+    - name: Upload Cypress screenshots
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: cypress-screenshots
+        path: Watcher/cypress/screenshots
+        if-no-files-found: ignore
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Push the tested image
+      env:
+        TAGS: ${{ steps.meta.outputs.tags }}
+      run: |
+        for tag in $TAGS; do
+          docker tag "$CI_IMAGE" "$tag"
+          docker push "$tag"
+        done
