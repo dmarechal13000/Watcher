@@ -22,27 +22,39 @@ make populate-db      # Seed sample data (./scripts/populate-db.sh)
 make superuser        # Create Django admin user (./scripts/create-superuser.sh)
 make create-certs     # Generate TLS certificates
 make backup           # Backup the database (./scripts/backup-db.sh)
+make dev              # Local dev stack: docker-compose.yml + compose.dev.yaml, builds watcher:dev, hot reload
+make dev-logs         # Follow watcher (Django runserver) + frontend (webpack --watch) logs of the dev stack
+make dev-down         # Stop the dev stack
+make docs             # Build Sphinx docs (Watcher/docs/_build) inside watcher:dev, as the host user (no local Sphinx needed)
 ```
 
-### Frontend (from repo root, builds into `Watcher/Watcher/frontend/static/frontend/`)
+Docker is the **only** supported way to run Watcher, for production (`make up`, gunicorn) and development (`make dev`). There is no documented host-side `runserver`/`npm run dev` workflow anymore.
 
-```bash
-npm run dev           # webpack --mode development --watch, served by Django via whitenoise
-npm run build          # webpack --mode production
-npm run cypress:open   # Cypress e2e, interactive
-npm run test:e2e       # Cypress e2e, headless
-```
+### Frontend (`Watcher/`, bundle written to `Watcher/Watcher/frontend/static/frontend/`)
+
+In `make dev`, the `frontend` container runs `npm run dev` (webpack `--watch`) on the bind-mounted sources, as the host UID, and only runs `npm ci` when `package-lock.json` changed. The production image runs `npm run build` in its `frontend-builder` stage (node:22, required by `@babel/core` 8). The bundle (`main.js`, `main.js.map`, `main.js.LICENSE.txt`) is **git-ignored**: never commit it, and don't rebuild it "before committing".
 
 There is no separate frontend dev server — React is bundled by webpack and served by Django itself (`frontend` app), unlike a typical Vite-proxied SPA setup.
 
-### Backend (from `Watcher/Watcher/`)
+```bash
+# Cypress headless against the dev stack (baseUrl defaults to http://127.0.0.1:9020), from the repo root
+docker run --rm --network host -v "$PWD/Watcher:/e2e" -w /e2e cypress/included:15.19.0
+```
+
+### Backend (from `deployment/`, against the running stack)
 
 ```bash
-python manage.py migrate
-python manage.py test               # per-app tests.py (accounts, common, connectors, cyber_watch, data_leak, dns_finder, site_monitoring, threats_watcher, timeline)
-python manage.py test <app_label>   # run a single app's tests
-python manage.py createsuperuser
+docker compose exec watcher python manage.py migrate
+docker compose exec watcher sh -c 'DB_USER=root DB_PASSWORD="$DB_ROOT_PASSWORD" python manage.py test'               # needs root: creates test_db_watcher
+docker compose exec watcher sh -c 'DB_USER=root DB_PASSWORD="$DB_ROOT_PASSWORD" python manage.py test <app_label>'   # single app
+docker compose exec watcher python manage.py createsuperuser
 ```
+
+Per-app `tests.py`: accounts, common, connectors, cyber_watch, data_leak, dns_finder, site_monitoring, threats_watcher, timeline, watcher.
+
+### CI (`.github/workflows/docker-ci.yml`)
+
+Reusable workflow called by `docker-image-test.yml` (push to `test` → `:test`) and `docker-image-latest.yml` (push to `master` → `:latest`): builds the image once, runs `manage.py test` inside it, starts it with its production command (gunicorn) and runs Cypress (`cypress/included`) against it, then pushes that exact image only if everything passed. `docker-image-tags.yml` (release `v*` tags) still builds and pushes without tests. There is no PR workflow.
 
 ## Architecture
 
@@ -50,13 +62,14 @@ python manage.py createsuperuser
 
 | Service | Role |
 |---|---|
-| `watcher` | Django app (runserver on 9002 in dev compose; Gunicorn-style prod image `ghcr.io/thalesgroup-cert/watcher`) — runs the web UI/API *and* the in-process APScheduler jobs (see below); fixed IP `10.10.10.6` |
-| `db_watcher` | MySQL 8.0 (`mysql_native_password` auth plugin required) — fixed IP `10.10.10.5` |
-| `searxng` | Privacy-respecting metasearch engine, used by `data_leak` for paste/code-leak searches — fixed IP `10.10.10.3` |
-| `certstream` | `0rickyy0/certstream-server-go` — Certificate Transparency stream consumed by `dns_finder` for real-time suspicious-domain detection — fixed IP `10.10.10.7` |
+| `watcher` | Django app, image `ghcr.io/thalesgroup-cert/watcher` — gunicorn on 9002 in production (`Watcher/Watcher/gunicorn.conf.py`), `runserver` in `make dev` — runs the web UI/API *and* the in-process APScheduler jobs (see below); published on `127.0.0.1:${WATCHER_PORT}` (9020) only |
+| `db_watcher` | MySQL 8.0 (`mysql_native_password` auth plugin required), data bind-mounted in `db_watcher/` at the repo root |
+| `searxng` | Privacy-respecting metasearch engine, used by `data_leak` for paste/code-leak searches |
+| `certstream` | `0rickyy0/certstream-server-go` — Certificate Transparency stream consumed by `dns_finder` for real-time suspicious-domain detection |
+| `frontend` (`make dev` only, `compose.dev.yaml`) | `node:22` running `npm run dev` (webpack `--watch`) on the bind-mounted sources |
 | `traefik` (optional, `compose_reverse_proxy.yaml`) | TLS-terminating reverse proxy for the corporate domain |
 
-All services share one Docker network (`10.10.10.0/24` in the simple root `docker-compose.yml`, or `${NETWORK_SUBNET}` in the modular `deployment/` compose set) with static IPs — the app talks to `searxng`/`db_watcher`/`certstream` by fixed address, not just service name, so don't renumber them without updating `no_proxy`/`NO_PROXY` too.
+All services share the external Docker network `${NETWORK_NAME}` (`watcher_net`, `${NETWORK_SUBNET}`, created by `scripts/check-network.sh`) and reach each other **by service name** (`db_watcher`, `searxng`, `certstream`, `watcher`), which `compose_apps.yaml` already adds to `no_proxy`. The former root `docker-compose.yml` (fixed `10.10.10.x` IPs) has been removed: `deployment/` is the only Compose setup.
 
 ### Detection → notification flow
 
@@ -107,13 +120,14 @@ React 18 (not 19) + React Router v5 + Redux (`redux`, `react-redux`, `redux-thun
 
 | File | Purpose |
 |---|---|
-| `deployment/.env` (from `.env.example`) | Everything: ports, image versions, network subnet/IPs, DB credentials, `DJANGO_SECRET_KEY`, SearxNG hostname, proxy settings. Watcher has **no `settings.json`** — all runtime config is environment variables consumed directly in `watcher/settings.py` |
+| `deployment/.env` (from `deployment/.env.example`) | Everything Compose also needs: ports, image versions, network, `TZ`, `DB_*`, `SEARX_*`, `CA_PATH` (host certs dir), proxy settings |
+| `.env` (repo root, from `.env.example`) | Django-only settings: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `ALLOWED_HOSTS`, connectors, LDAP/OIDC, `DATA_LEAK_SEARX_URL`... Watcher has **no `settings.json`** — all runtime config is environment variables consumed directly in `watcher/settings.py` |
 | `certstream-config.yaml` | Config for the bundled certstream-server-go instance |
 | `Searx/searx/` | SearxNG instance config, mounted read-write into the `searxng` container |
 | `deployment/Makefile` | All operational tasks (see Commands above) |
 | `deployment/scripts/` | `init.sh`, `deploy.sh`, `migrate.sh`, `populate-db.sh`, `create-superuser.sh`, `backup-db.sh`, `check-network.sh`, `replace-tls.sh` |
 
-The root `.env` is currently **tracked by git** in this repo (not gitignored) — don't assume it's safe to fill in real secrets locally without first checking `git status`/adding it to `.gitignore`, and don't `git add`/commit it without checking what you'd be staging.
+Both `.env` files are **git-ignored**; only their `.env.example` templates are committed. `deployment/certificates/*/` (generated CA, including its private key) is git-ignored too.
 
 ## Full Local Dev Deployment — `/deploy-full-e2e`
 
@@ -121,14 +135,16 @@ Trigger phrase for this section: "deploy full e2e", "stand up the full stack", "
 
 Assumes: Docker + Compose v2 (this machine: client 29.7.2 / compose plugin 5.5.1), commands run from `deployment/` unless noted. **On Windows/Git Bash, `make` is typically absent** — run the underlying commands shown under each step directly instead of via `make <target>`.
 
-### 1. Two separate `.env` files — they overlap, and one silently wins
+### 1. Two separate `.env` files — one owner per variable
 
-Watcher reads config from **two different `.env` files at once**. `compose_apps.yaml`'s `watcher` service loads `env_file: [${WATCHER_PATH}/.env, ./.env]` — both merged into the container's environment, with the *second* file's values overriding the first on any shared key:
+Watcher reads config from **two different `.env` files at once**. `compose_apps.yaml`'s `watcher` service loads `env_file: [${WATCHER_PATH}/.env, ./.env]` — both merged into the container's environment, with the *second* file's values overriding the first on any shared key. The templates are written so that **no key is shared**:
 
-- **`Watcher/.env`** (repo root, sibling to this file) — the actual Django-level config read in `watcher/settings.py` and each app's `core.py`: `DJANGO_SECRET_KEY`, `DB_*`, LDAP/OIDC, SMTP, Slack/Citadel/TheHive/MISP keys, CyberWatch feed URLs, etc. **There is no `.env.example` for this file anywhere in the repo** — construct it from the variable names Django actually reads, or copy an existing deployment's `.env` and blank the secrets.
-- **`deployment/.env`** (from `deployment/.env.example`) — the Compose-level config: ports, image versions, network subnet/IPs, container names — but **also** `DB_USER`/`DB_PASSWORD`/`DB_ROOT_PASSWORD`/`DJANGO_SECRET_KEY`/`TZ`/`SEARX_HOSTNAME`/`SEARX_COMMAND`/`DATA_LEAK_SEARX_URL`/`HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY` — the exact same variable names as the root `.env`.
+- **`Watcher/.env`** (repo root, from `.env.example`) — Django-only settings: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `ALLOWED_HOSTS`, LDAP/OIDC, SMTP, Slack/Citadel/TheHive/MISP keys, LLM providers, CyberWatch feed URLs, `DATA_LEAK_SEARX_URL`. `cp .env.example .env` (`init.sh` also does it if missing).
+- **`deployment/.env`** (from `deployment/.env.example`) — everything Compose also needs: ports, image versions, network, container names, `TZ`, `DB_*`, `SEARX_HOSTNAME`, `SEARX_COMMAND`, `CA_PATH`, `HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY`.
 
-Because `deployment/.env` loads *last*, it silently wins on all 11 overlapping keys. Set a real `DJANGO_SECRET_KEY` or DB password only in the root `.env` and the container still runs with `deployment/.env`'s (placeholder) value — no error, no warning. Keep those keys in sync by hand across both files.
+Never add a key to both: `deployment/.env` would silently win, with no error. This used to break Data Leak (an empty `DATA_LEAK_SEARX_URL` in `deployment/.env` overrode the root URL). An older `deployment/.env` (created before the split) may still contain `DJANGO_SECRET_KEY`/`DATA_LEAK_SEARX_URL`: remove them. Check for overlaps with `comm -12 <(grep -oE '^[A-Za-z_][A-Za-z0-9_]*' ../.env | sort -u) <(grep -oE '^[A-Za-z_][A-Za-z0-9_]*' .env | sort -u)` (must print nothing).
+
+`CA_PATH` means the host certificates dir to Compose; `compose_apps.yaml` sets the container's `CA_PATH` to `/etc/ssl/certs/ca-certificates.crt` (system roots + the mounted CA after `update-ca-certificates`).
 
 ### 2. `init.sh` (`make init`)
 
@@ -153,9 +169,7 @@ MSYS_NO_PATHCONV=1 bash ./scripts/check-network.sh
 MSYS_NO_PATHCONV=1 bash ./scripts/replace-tls.sh
 MSYS_NO_PATHCONV=1 docker compose --env-file .env up -d
 ```
-`check-network.sh` creates the external `${NETWORK_NAME}` bridge network (`watcher_net` by default, with `${NETWORK_SUBNET}`/`${NETWORK_GATEWAY}`/`${NETWORK_IP_RANGE}`) if it doesn't already exist — idempotent, safe to re-run. `docker compose up -d` then pulled all 5 images (`watcher`, `db_watcher`, `searxng`, `certstream`, `traefik`) and brought every container up; `db_watcher` reports healthy first, then `watcher` starts (its `depends_on: condition: service_healthy` on the DB), reaching `healthy` itself roughly a minute later — Django's `runserver` takes a while to import (torch/transformers among the heavier ones) across all 9 apps' `core.py`.
-
-**Note — `docker-compose.overide.yml` is misspelled** (missing the second `r`; Compose's auto-load convention needs the exact name `docker-compose.override.yml`). It exists in `deployment/`, is nearly identical to `docker-compose.yml` (only the `certstream` healthcheck differs — `curl` vs `pgrep`), and is **never picked up automatically** by `docker compose up`. To actually apply it: `docker compose -f docker-compose.yml -f docker-compose.overide.yml --env-file .env up -d`.
+`check-network.sh` creates the external `${NETWORK_NAME}` bridge network (`watcher_net` by default, with `${NETWORK_SUBNET}`/`${NETWORK_GATEWAY}`/`${NETWORK_IP_RANGE}`) if it doesn't already exist — idempotent, safe to re-run. `docker compose up -d` then pulled all 5 images (`watcher`, `db_watcher`, `searxng`, `certstream`, `traefik`) and brought every container up; `db_watcher` reports healthy first, then `watcher` starts (its `depends_on: condition: service_healthy` on the DB), reaching `healthy` itself roughly a minute later — gunicorn's worker takes a while to import (torch/transformers among the heavier ones) and its `post_worker_init` hook loads the URLconf at boot so every app's scheduler starts without waiting for a first request. Keep gunicorn at **one worker** (`gunicorn.conf.py`): each worker would start its own schedulers and duplicate every job.
 
 `db_watcher`'s bind mounts (`../db_watcher/data`, `../db_watcher/logs` — i.e. `Watcher/db_watcher/` at the repo root, sibling to `deployment/`) don't exist before the first run; Docker creates them, and the official `mysql` image's own entrypoint (starts as root, drops to the `mysql` user itself) handled ownership fine here — no manual `mkdir`/`chown` needed, unlike a from-scratch app image.
 

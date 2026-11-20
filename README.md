@@ -190,11 +190,13 @@ Django provides a ready-to-use user interface for administrative activities. We 
 ## Installation
 
 ```bash
-# 1. Clone the repo
+# 1. Clone the repo and create the application settings file
 git clone https://github.com/thalesgroup-cert/watcher.git
-cd watcher/deployment
+cd watcher
+cp .env.example .env
+cd deployment
 
-# 2. Initialize environment, configs & directory structure
+# 2. Initialize environment (deployment/.env), configs & certificates
 make init
 
 # 3. Start the stack
@@ -206,7 +208,7 @@ make superuser
 make populate-db
 
 # 5. Open the web UI
-#    http://localhost:9002  (or your configured domain/port)
+#    http://localhost:9020  (or https://<DOMAIN_CORP> through Traefik)
 ```
 
 Get Watcher up and running in just **10 minutes** using Docker. **Detailed instructions available in our [Installation Guide](https://thalesgroup-cert.github.io/Watcher/README.html)**

@@ -1,7 +1,7 @@
 # --- Makefile ---
 include .env
 
-.PHONY: help netcheck up down build pull deploy migrate backup populate-db superuser create-certs init dev dev-down dev-logs
+.PHONY: help netcheck up down build pull deploy migrate backup populate-db superuser create-certs init dev dev-down dev-logs docs
 
 NETCHECK_CMD = ./scripts/check-network.sh
 REPLACE_TLS_CMD = ./scripts/replace-tls.sh
@@ -25,6 +25,7 @@ help:
 	@echo "  dev           - Start the local dev stack (hot reload: runserver + webpack watch)"
 	@echo "  dev-down      - Stop the local dev stack"
 	@echo "  dev-logs      - Follow watcher and frontend logs of the dev stack"
+	@echo "  docs          - Build the Sphinx documentation (Watcher/docs/_build) in the watcher:dev image"
 
 up:
 	$(NETCHECK_CMD)
@@ -87,3 +88,12 @@ dev-down:
 
 dev-logs:
 	@$(DEV_COMPOSE) logs -f watcher frontend
+
+# Sphinx and every dependency autodoc imports are in the watcher:dev image.
+# Run as the host user: build_the_docs.sh temporarily rewrites source files with sed -i.
+docs:
+	@echo "Building the documentation..."
+	@$(DEV_COMPOSE) build watcher
+	@docker run --rm --user $(shell id -u):$(shell id -g) -e HOME=/tmp \
+		-v "$(abspath $(WATCHER_PATH))/Watcher:/src" -w /src/docs \
+		--entrypoint ./build_the_docs.sh watcher:dev

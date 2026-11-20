@@ -4,82 +4,65 @@ Developed by [Thales Group CERT](https://github.com/thalesgroup-cert).
 
 # Install Watcher
 
-## Prerequisites
-- [Install docker](https://docs.docker.com/install/)
-
 ## Launch watcher
 
-### With docker command
-- Grab the `docker-compose.yml`, `.env` files and `Searx` directory (keep the directory structure).
-- According to your existing infrastructure you may need to configure **Watcher settings** using the `.env` file ([Static configuration](#static-configuration)).
-- The application uses **SearxNG** as the meta search engine.
-- `docker compose up`
+Watcher is deployed with **Docker Compose**, from the `deployment/` directory of the repository. It starts every service Watcher needs: the Watcher application, its MySQL database, SearxNG (Data Leak searches), CertStream (Certificate Transparency) and Traefik (TLS reverse proxy).
 
-This should run Docker containers.
+### Prerequisites
+- [Docker](https://docs.docker.com/install/) with Docker Compose v2 (`docker compose`)
+- `make` (optional: every `make` target below is a thin wrapper around a script of `deployment/scripts/` or a `docker compose` command, see [deployment/Makefile](https://github.com/thalesgroup-cert/Watcher/blob/master/deployment/Makefile))
 
-Please wait until you see:
+### Install
 
-    watcher          | db_watcher is up, starting Watcher.
-    watcher          | Performing system checks...
-    watcher          | 
-    watcher          | System check identified no issues (0 silenced).
-    watcher          | May 11, 2026 - 12:26:52
-    watcher          | Django version 6.0.5, using settings 'watcher.settings'
-    watcher          | Starting development server at http://0.0.0.0:9002/
-    watcher          | Quit the server with CONTROL-C.
+    git clone https://github.com/thalesgroup-cert/Watcher.git
+    cd Watcher
 
-- Try to access Watcher on http://0.0.0.0:9002 or http://yourserverip:9002.
-- `CONTROL-C`
-- `docker compose down` to stop all containers.
+    # Application settings (Django): edit it afterwards, see "Static configuration" below
+    cp .env.example .env
 
-### Simplify method
-Use the deployment helper commands from the repository root:
+    cd deployment
+    make init     # creates deployment/.env, the network config check and the TLS certificates
+    make up       # pulls the images and starts the stack
 
-Initialize **your local configuration once**: `cp .env.example .env`
-
-**And after:** 
-
-    cd ../deployment
-    make init
-    make up
-
-**On first run**:
+**On first run**, initialize the database and create the first administrator:
 
     make migrate
     make superuser
     make populate-db
 
-Then **access Watcher on**:
+Then **access Watcher on** http://localhost:9020 (`WATCHER_PORT` in `deployment/.env`). This port is only bound to the host's loopback interface: to access Watcher from other machines, go through Traefik (see [Access Watcher remotely](#access-watcher-remotely-within-your-server-instance)).
 
-- http://0.0.0.0:9020 (default deployment port)
-- or your configured domain/port from `deployment/.env`
+Stop the stack with `make down`.
 
-Deployment configuration is centralized in `deployment/.env` (generated from `deployment/.env.example`).
-Set your secrets there, especially `DJANGO_SECRET_KEY`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, and `DB_ROOT_PASSWORD`.
+### The two configuration files
+
+Watcher is configured by **two** `.env` files, both created from a committed `.env.example` template and never committed themselves. **Each variable belongs to exactly one of them:**
+
+| File | Contains | Examples |
+|---|---|---|
+| `deployment/.env` | Everything Docker Compose needs (also passed to the Watcher container) | `WATCHER_VERSION`, `WATCHER_PORT`, `DOMAIN_CORP`, network, `TZ`, `DB_USER`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `SEARX_*`, `CA_PATH`, `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY` |
+| `.env` (repository root) | Django application settings | `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, SMTP, LDAP, OIDC, MISP, TheHive, Slack, Citadel, LLM providers, CyberWatch feeds, `DATA_LEAK_SEARX_URL` |
+
+> **Warning:** do not define a variable in both files. `deployment/.env` is loaded last and silently overrides the root `.env`.
 
 ### Migrate
 Updates the state of the database in accordance with all current models and migrations. Migrations, their relationships 
 with applications...
 
-    docker compose down
-    docker compose run watcher bash
-    python manage.py migrate
-    
+    # from the deployment/ directory
+    make migrate
+
 ### Create admin user
 You will need to create the first superuser to access the `/admin` page.
 
-    docker compose down
-    docker compose run watcher bash
-    python manage.py createsuperuser
+    # from the deployment/ directory
+    make superuser
 
 ### Populate your database
 Populate your database with hundred of banned words and RSS sources related to Cyber Security.
 
-Use `populate_db` script:
-
-    docker compose down
-    docker compose run watcher bash
-    python manage.py populate_db
+    # from the deployment/ directory
+    make populate-db
 
 ### Good to know
 The first time you run Watcher, you will not have any new threats on the homepage, this is normal.
@@ -89,44 +72,59 @@ You just have to wait for Watcher to crawl the Internet. This will happen every 
 ## Static configuration
 Most of the settings can be modified from the `/admin` page.
 
-There are other settings located in the `.env` file that you can configure.
+There are other settings located in the `.env` file at the repository root that you can configure. Unless stated otherwise, the variables of this section belong to that file (see [The two configuration files](#the-two-configuration-files)).
 
 Many of the external-integration settings below (SMTP, Slack, MISP, TheHive, Citadel, CyberWatch feeds, LLM providers) can also be viewed, overridden, and tested live from the [Connectors](#connectors) page, without editing the `.env` file.
 
 ### Production Settings [Important]
 
-In production please put DJANGO_DEBUG environment variable to **False** in the `.env` file:
+Django's debug mode is **off by default**: it is only enabled when `DJANGO_DEBUG` is explicitly set to `True`, which must never be done in production. Keep it off in the `.env` file:
 
     DJANGO_DEBUG=False
     
 Also, the **Django secret key** must be a **large random value** and it must be kept secret.
-There is one by default but consider to change it in the `.env` file:
+When it is left empty, Django falls back to a default key that is public in the source code: **always set it** in the `.env` file:
 
+    # generate one with: openssl rand -base64 33
     DJANGO_SECRET_KEY=[large random value]
+
+Change the database credentials too, in `deployment/.env`, **before the first start** (they are only applied when the database is created):
+
+    DB_PASSWORD=[strong password]
+    DB_ROOT_PASSWORD=[another strong password]
     
-Time Zone settings in the `.env` file:
+Time Zone settings in the `deployment/.env` file:
 
     # Time Zone
     TZ=Europe/Paris
 
 If you have modified some of these parameters, don't forget to restart all containers:
 
-    docker compose down
-    docker compose up
+    # from the deployment/ directory
+    make down
+    make up
 
 ### Access Watcher remotely within your server instance
-In case of **"Bad Request" Error** when accessing Watcher web interface, fill `ALLOWED_HOST` variable (in `.env` file) with your Watcher Server Instance **IP** / or your **FQDN**.
+The Watcher port (`WATCHER_PORT`, 9020 by default) only listens on the host's loopback interface. Remote users access Watcher **through Traefik**, in HTTPS on port 443:
 
-It is limited to a **single IP address** / **single FQDN**. 
+1. In `deployment/.env`, set `DOMAIN_CORP` to the FQDN users will type (e.g. `watcher.mycompany.com`), and make it resolve to your server.
+2. Put your TLS certificate and key in `deployment/certificates/` as `certfile.pem` and `keyfile.pem` (`make init` generates a self-signed pair by default).
+3. In the root `.env` file, fill `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`:
 
-Please use this syntax: 
+        # Traefik forwards requests to Django with the Host header "watcher": keep it in the list
+        ALLOWED_HOSTS=watcher,watcher.mycompany.com
+        # Single FQDN, without the https:// scheme
+        CSRF_TRUSTED_ORIGINS=watcher.mycompany.com
 
-    ALLOWED_HOST=X.X.X.X or ALLOWED_HOST=mywebsite.com
+`ALLOWED_HOSTS` accepts several IP addresses / FQDNs separated by commas. A **"Bad Request" (400) error** when accessing Watcher means the requested host is missing from it.
+
+> **Note:** `make init` writes `DOMAIN_CORP` into `traefik/dynamic/tls.yaml` only once (it replaces the `` Host(`watcher`) `` placeholder). To change the domain later, edit the `Host(...)` rule of that file by hand.
     
 Now, you can restart your instance and the parameters will be taken into account:
 
-    docker compose down
-    docker compose up
+    # from the deployment/ directory
+    make down
+    make up
  
 ### MISP Settings
 If you want to use **MISP export**, please fill the **IP** of your MISP instance and an **API key**.
@@ -140,8 +138,9 @@ In the `.env` file:
  
 Now, you can restart your instance and the parameters will be taken into account:
 
-    docker compose down
-    docker compose up
+    # from the deployment/ directory
+    make down
+    make up
  
 ### LDAP Settings
 You can configure an LDAP authentication within Watcher:
@@ -157,8 +156,9 @@ In the `.env` file:
  
 Now, you can restart your instance and the parameters will be taken into account:
 
-    docker compose down
-    docker compose up
+    # from the deployment/ directory
+    make down
+    make up
 
 ### SSO / OpenID Connect Settings
 
@@ -201,8 +201,9 @@ The callback URL to register with your identity provider is:
 
 Now, you can restart your instance and the parameters will be taken into account:
 
-    docker compose down
-    docker compose up
+    # from the deployment/ directory
+    make down
+    make up
 
 ### CyberWatch Settings
 
@@ -220,8 +221,9 @@ In the `.env` file:
 
 Now, you can restart your instance and the parameters will be taken into account:
 
-    docker compose down
-    docker compose up
+    # from the deployment/ directory
+    make down
+    make up
 
 ### LLM Settings
 
@@ -272,8 +274,9 @@ In the `.env` file:
 
 Now, you can restart your instance and the parameters will be taken into account:
 
-    docker compose down
-    docker compose up
+    # from the deployment/ directory
+    make down
+    make up
 
 ### Configurable Help Button
 
@@ -294,25 +297,35 @@ See [deployment/README.md](https://github.com/thalesgroup-cert/Watcher/blob/mast
 ## Troubleshooting
 ### Remove the database
 
-You may want to **reset** your database entirely, in case of troubleshooting or other. To do this, you need to remove the database stored in your host system and restart the instance:
+You may want to **reset** your database entirely, in case of troubleshooting or other. The database files are stored on the host, in the `db_watcher/` directory at the repository root. **This deletes all your data**: make a backup first with `make backup` if needed.
 
-    docker compose down
-    docker volume rm watcher-project_db_data
-    docker volume rm watcher-project_db_log
+    # from the deployment/ directory
+    make down
+    sudo rm -rf ../db_watcher/data
+    make up
 
-Now, you can rebuild the image and the parameters will be taken into account:
-
-    docker compose up
-
-Don't forget to [migrate](#migrate).
+Don't forget to [migrate](#migrate), and then to create a [superuser](#create-admin-user) again.
 
 ### Useful commands
 
-Use `docker compose up -d` if you want to run it in background.
+From the `deployment/` directory:
 
-Run interactive shell session on the Watcher container:
+    # Status of the containers
+    docker compose ps
 
-    docker compose run watcher bash
+    # Follow the Watcher logs
+    docker compose logs -f watcher
+
+    # Interactive shell in the running Watcher container
+    docker compose exec watcher bash
+
+    # Django shell
+    docker compose exec watcher python manage.py shell
+
+    # Backup the database into deployment/backups/
+    make backup
+
+After editing a `.env` file, recreate the containers with `make down` then `make up`: `docker compose restart` does not reload `.env` files.
 
 # Use Watcher
 ## User enrollment 
@@ -381,8 +394,9 @@ Follow these steps to get the required information:
 
 Now, you can restart your instance and the parameters will be taken into account:
 
-    docker compose down
-    docker compose up
+    # from the deployment/ directory
+    make down
+    make up
 
 ### Configure your TheHive notifications
 
@@ -413,8 +427,9 @@ Follow these steps to get the required information:
 
 Now, you can restart your instance and the parameters will be taken into account:
 
-    docker compose down
-    docker compose up
+    # from the deployment/ directory
+    make down
+    make up
 
 ### Configure your Slack notifications
 
@@ -438,8 +453,9 @@ Follow these steps to get the required information:
 
 Now, you can restart your instance and the parameters will be taken into account:
 
-    docker compose down
-    docker compose up
+    # from the deployment/ directory
+    make down
+    make up
 
 ### Configure your Citadel notifications
 
@@ -460,8 +476,9 @@ Follow these steps to get the required information:
 
 Now, you can restart your instance and the parameters will be taken into account:
 
-    docker compose down
-    docker compose up
+    # from the deployment/ directory
+    make down
+    make up
 
 ## Add your RSS source to Threats Detection
 As you know this feature allow the detection of emerging vulnerabilities, malwares using social networks & other RSS sources (www.cert.ssi.gouv.fr, www.cert.europa.eu, www.us-cert.gov, www.cyber.gov.au...)
@@ -876,7 +893,7 @@ Below, you will find our 6 modules with their API functions:
 
 To obtain detailed information about a specific item, such as an alert, a monitored site, or any other entity in the system, you can access its details by appending `/(?P<pk>[^/.]+)/$` to the end of the corresponding API URL.
 
-For instance, let's say you want to retrieve information about an alert with the ID "1". You would construct the URL as follows: `http://0.0.0.0:9002/api/site_monitoring/alert/1`
+For instance, let's say you want to retrieve information about an alert with the ID "1". You would construct the URL as follows: `http://localhost:9020/api/site_monitoring/alert/1`
 
 By making a GET request to this URL using your web browser, CURL, or any HTTP client, you will receive comprehensive details about the alert with the ID "1".
 
@@ -1189,48 +1206,67 @@ To archived **several** alerts:
 
 # Update Watcher
 
-Verify that your local files `/.env`, `/docker-compose.yml` and `/Searx/` are **up-to-date**.
-
-> **Note:** Watcher uses the official image from **GitHub Container Registry (GHCR)**: `ghcr.io/thalesgroup-cert/watcher:latest`
+> **Note:** Watcher uses the official image from **GitHub Container Registry (GHCR)**: `ghcr.io/thalesgroup-cert/watcher`, at the version set by `WATCHER_VERSION` in `deployment/.env` (`latest` by default).
 
 ## Update Process
 
-To update Watcher image please follow the instructions below:
+From the repository root, get the latest deployment files (`deployment/`, `Searx/`, `traefik/`, `.env.example` templates):
 
-- Stop all containers:
+    git pull
 
-  ```bash
-    docker compose down
-  ```
-- Remove the old docker images:
+Then, from the `deployment/` directory:
 
-  ```bash
-    docker rmi ghcr.io/thalesgroup-cert/watcher:latest
-    docker rmi mysql:8.0.40
-    docker rmi searxng/searxng:latest
-    docker rmi 0rickyy0/certstream-server-go:v1.8.2
-  ```
-- Pull the newer docker images:
+    make pull     # pull the newer images
+    make up       # recreate the containers that changed
 
- ```bash
-    docker compose pull
-  ```
-- Start the containers:
-
-  ```bash
-    docker compose up -d
-  ```
-
-This will update the Watcher project.
+Compare your `.env` files with their `.env.example` templates and add the new variables, if any.
 
 ## Migrate & Populate the database (mandatory)
 
 Updates the state of the database in accordance with all current models and migrations. Populate your database with hundred of banned words and RSS sources related to Cyber Security.
 
-    docker compose down
-    docker compose run watcher bash
-    python manage.py migrate
-    python manage.py populate_db
+    # from the deployment/ directory
+    make migrate
+    make populate-db
+
+## Migrating from the root docker-compose.yml (breaking change)
+
+Older versions were started with a `docker-compose.yml` file at the repository root, with a git-tracked root `.env` file. That file has been removed: Watcher is now deployed **only** from `deployment/`. Follow these steps **in this order** if your instance still runs with the root `docker-compose.yml`.
+
+1. **Backup the database**, from the repository root, while the old stack is still running:
+
+        docker exec db_watcher sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" db_watcher' > ../watcher-backup.sql
+
+2. **Stop the old stack**, before pulling (the file describing it disappears with the update):
+
+        docker compose down
+
+3. **Update the code while keeping your settings.** The root `.env` is no longer tracked by git (it became `.env.example`), so `git pull` refuses to run while it contains local changes:
+
+        cp .env ../watcher.env.backup
+        git checkout -- .env
+        git pull
+        cp ../watcher.env.backup .env
+
+4. **Split your settings between the two files** (see [The two configuration files](#the-two-configuration-files)):
+
+        cd deployment
+        make init     # creates deployment/.env
+
+    - Copy the values of `TZ`, `DB_USER`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `HTTP_PROXY` and `HTTPS_PROXY` from your root `.env` to `deployment/.env`.
+    - Then **remove** these variables from the root `.env`, as well as `CA_PATH`, `SEARX_HOSTNAME`, `SEARX_PROTOCOL`, `SEARX_COMMAND` and `NO_PROXY` (the `10.10.10.x` addresses are no longer used).
+
+5. **Start the new stack and restore the database:**
+
+        make up
+        docker exec -i db_watcher sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" db_watcher' < ../../watcher-backup.sql
+        make migrate
+
+6. Watcher is now available on http://localhost:9020 instead of port 9002 (see [Access Watcher remotely](#access-watcher-remotely-within-your-server-instance) for remote access).
+
+Once everything works, the old database volumes can be removed (`docker volume ls` lists them, they end with `_db_data` and `_db_log`).
+
+**Already deploying from `deployment/`?** Your `deployment/.env` was created from an older template: move `DJANGO_SECRET_KEY` to the root `.env`, and remove `DJANGO_SECRET_KEY` and `DATA_LEAK_SEARX_URL` from `deployment/.env` (its empty `DATA_LEAK_SEARX_URL` overrode the root value and disabled Data Leak searches).
 
 ## Managing Breaking Changes (optional)
 
@@ -1285,133 +1321,49 @@ If you want to modify the project and Pull Request (PR) your work, you will need
 - Done! Your work will be reviewed by the team! 
 
 ## Setup Watcher environment
-Use a Linux server, we recommend the use of a Virtual Machine (Ubuntu 20.04 and Ubuntu 21.10 LTS in our case).
 
-Then, follow the steps below:
+The development environment runs in Docker too, on the same stack as production (MySQL, SearxNG, CertStream, Traefik), with **hot reload**. You only need **Docker** and **make**: no Python, Node.js or MySQL to install on your machine.
 
-- **Update and upgrade your machine:** 
-  
-  ```bash
-  sudo apt update && sudo apt upgrade -y
-- **Install Python and Node.js:**
+    git clone <your_forked_repository.git>
+    cd Watcher
+    cp .env.example .env
 
-  ```bash
-  sudo apt install python3 python3-pip -y 
-  sudo apt install nodejs -y
-- **Create and activate a Python virtual environment:**
+    cd deployment
+    make init
+    make dev
 
-  ```bash
-  python3 -m venv .venv |source .venv/bin/activate
-- **Pull Watcher code:**
+On first run:
 
-  ```bash
-  git clone <your_forked_repository.git>
-- **Move to the following directory:**
-  
-  ```bash
-  cd Watcher/Watcher
-- **Install** `python-ldap` **dependencies:**
+    make migrate
+    make superuser
+    make populate-db
 
-  ```bash
-  sudo apt install -y libsasl2-dev python-dev-is-python3 libldap2-dev libssl-dev
-- **Install** `mysqlclient` **dependency:**
+Watcher is available on http://localhost:9020. `make dev` uses `deployment/compose.dev.yaml` on top of the production stack:
 
-  ```bash
-  sudo apt install default-libmysqlclient-dev
-- **Install Rust (for tokenizers, etc)**
+- the `watcher` image is **built from your local code** (`watcher:dev`) instead of pulled from GHCR, and runs Django's `runserver` on your bind-mounted sources: **editing a Python file restarts the server**;
+- a `frontend` container runs `npm run dev` (webpack in watch mode): **editing a React file rebuilds the bundle** in a few seconds, refresh your browser;
+- `DJANGO_DEBUG` is forced to `True` for this stack only, without editing your `.env` files.
 
-  ```bash
-  curl https://sh.rustup.rs -sSf | sh -s -- -y |source $HOME/.cargo/env 
-- **Install Python dependencies:**
+| Command (from `deployment/`) | Purpose |
+|---|---|
+| `make dev` | Start the dev stack (rebuilds the `watcher:dev` image when `requirements.txt` or the `Dockerfile` changed) |
+| `make dev-logs` | Follow the Django and webpack logs |
+| `make dev-down` | Stop the dev stack (the database is kept) |
 
-  ```bash
-  pip3 install -r requirements.txt
-- **Install Torch and Torchvision dependencies:**
-
-  ```bash
-  pip install --extra-index-url https://download.pytorch.org/whl/cpu torch==2.13.0 torchvision==0.28.0 torchaudio==2.11.0
-- **Install NLTK/punkt dependency:** 
-  
-  ```bash
-    python3 ./nltk_dependencies.py
-  ```
-    
-    - If you have a proxy, you can configure it in `nltk_dependencies.py` script.
-- **Install Node.js dependencies:**
-    ```bash   
-    sudo apt install npm -y
-    npm install
-- **Install MySQL:**
-
-  ```bash
-  sudo apt install mysql-server -y
-  sudo mysql_secure_installation
-  ```
-  - Enter root password.
-  - You may now enter `Y` and `ENTER`. Accept all fields. This will remove some anonymous users and the test database,  
-    disable remote root logins, and load these new rules so that MySQL immediately respects any changes made.
-
-**Create & Configure Watcher database:**
-  ```sql
-    sudo mysql 
-    CREATE USER 'watcher'@'localhost' IDENTIFIED BY 'Ee5kZm4fWWAmE9hs!';
-    GRANT ALL PRIVILEGES ON *.* TO 'watcher'@'localhost' WITH GRANT OPTION;
-    CREATE DATABASE db_watcher;
-    use db_watcher;
-    exit
-  ```
-
-  ```bash
-  systemctl status mysql.service
-  ```
-
-```bash
-  cd Watcher/Watcher
-  ```
-
-In `settings.py` change `HOST` variable to `localhost`:
-
-  ```python
-    DATABASES = {
-      'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'CONN_MAX_AGE': 3600,
-        'NAME': 'db_watcher',
-        'USER': 'watcher',
-        'PASSWORD': 'Ee5kZm4fWWAmE9hs!',
-        'HOST': 'localhost',
-        'PORT': '3306',
-        'OPTIONS': {
-          'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-      }
-    }
-  ```
-
-- <span style="color:red">**[IMPORTANT]** When **commit** put `HOST` variable back to `db_watcher`</span>
- ```bash
-    cd ..
-  ```
-- **[Migrate](#migrate) the database:** 
-  
-  ```bash
-  python3 manage.py migrate
-  ```
-- **Run Watcher:**
-
-  ```bash
-  python3 manage.py runserver
-  ```
+The `frontend` container runs `npm ci` only when `package-lock.json` changed since the last install, and runs as your user so `node_modules` and the generated bundle stay yours. If your file changes are not detected (e.g. sources on a Windows filesystem mounted into Docker), start it with polling: `WATCHPACK_POLLING=true make dev`.
 
 ## Deploy a simple SMTP server to test the email notifications
 If you are working on a test environment and willing to have email alerts, here is a simple way to configure the SMTP settings to make it work.
-- Grab the docker-compose file: [here](https://github.com/rnwood/smtp4dev/blob/master/docker-compose.yml).
-- Run the command: `docker compose up`
-- The mails will be available here by default: `localhost:5000`
-- Modify the mail settings in the environment variables: `vi /.env`
-    - `SMTP_SERVER=localhost`
+- Run [smtp4dev](https://github.com/rnwood/smtp4dev) on the Watcher network:
+
+      docker run -d --name smtp4dev --network watcher_net -p 127.0.0.1:5000:80 rnwood/smtp4dev
+
+- The mails will be available here: http://localhost:5000
+- Modify the mail settings in the root `.env` file:
+    - `SMTP_SERVER=smtp4dev`
+    - `EMAIL_PORT=25`
     - `EMAIL_FROM=from@from.com`
-- Launch Watcher: `python Watcher/Watcher/manage.py runserver` 
+- Recreate the Watcher container: `make dev` (from the `deployment/` directory)
 
 ## Unit Testing
 
@@ -1432,52 +1384,39 @@ The test suite covers all 6 main modules of Watcher:
 
 ### Automated CI/CD Testing
 
-All tests are **automatically executed** in our CI/CD pipeline using **GitHub Actions**:
+All tests are **automatically executed** by **GitHub Actions** (`.github/workflows/docker-ci.yml`), **inside the Docker image** that is about to be published:
 
-- **Triggered on**: Push, Pull Requests, and manual workflow dispatch
-- **Execution**: Both back-end and front-end tests run automatically
-- **Coverage**: Full test suite validation before code integration
+- **Triggered on**: push to the `test` branch (publishes `ghcr.io/thalesgroup-cert/watcher:test`), push to the `master` branch (publishes `:latest`), and manual workflow dispatch.
+- **Execution**: the image is built once, the back-end tests run inside it, the image is started with its production command (gunicorn), and the Cypress tests run against it.
+- **Publication**: that exact image is pushed to GHCR **only if every test passed**.
 
-The CI/CD workflow ensures that:
-- No broken code reaches the main branch
-- All new features are properly tested
-
-You can view the workflow file at `.github/workflows/docker-image-latest.yml` and monitor test results in the **Actions** tab of the GitHub repository.
-
+You can monitor test results in the **Actions** tab of the GitHub repository.
 
 ### The commands
 
-**IMPORTANT**: All test commands must be executed from the `Watcher/Watcher` directory:
-
-```bash
-cd Watcher/Watcher
-```
+Run the tests against your dev stack (`make dev`), from the `deployment/` directory.
 
 #### Back-End Tests
-To run all Django unit tests:
+The tests create a temporary test database, which requires the MySQL `root` account. To run all Django unit tests:
 
 ```bash
-python manage.py test
+docker compose exec watcher sh -c 'DB_USER=root DB_PASSWORD="$DB_ROOT_PASSWORD" python manage.py test'
 ```
 
-To run tests for a specific module:
+To run tests for a specific module, add its name after `test`:
 
 ```bash
-python manage.py test <module_name>
+docker compose exec watcher sh -c 'DB_USER=root DB_PASSWORD="$DB_ROOT_PASSWORD" python manage.py test <module_name>'
 ```
 
-To run with verbose output:
-
-```bash
-python manage.py test --verbosity=2
-```
+To run with verbose output, add `--verbosity=2`.
 
 #### Front-End Tests
 
 Before running front-end tests, you need to create a test superuser:
 
 ```bash
-python manage.py shell -c "
+docker compose exec watcher python manage.py shell -c "
 from django.contrib.auth.models import User
 User.objects.create_superuser('Watcher', 'cypress@watcher.com', 'Watcher', first_name='Unit-Test Cypress', last_name='Watcher')
 "
@@ -1496,17 +1435,21 @@ env: {
 }
 ```
 
-To run with an interactive Cypress Test Runner:
+To run in headless mode (as the CI does), with the official Cypress image, from the repository root:
+
+```bash
+docker run --rm --network host -v "$PWD/Watcher:/e2e" -w /e2e cypress/included:15.19.0
+```
+
+(`--network host` lets the container reach `127.0.0.1:9020`; on Docker Desktop, it requires host networking to be enabled in the settings.)
+
+To run with the interactive Cypress Test Runner, Node.js and the Cypress desktop dependencies are needed on your machine. From the `Watcher/` directory:
 
 ```bash
 npm run cypress:open
 ```
 
-To run in headless mode (CI/CD):
-
-```bash
-npm run test:e2e
-```
+Both target http://127.0.0.1:9020 (`baseUrl` in `cypress.config.js`).
 
 ### Development Guidelines
 
@@ -1536,18 +1479,9 @@ Watcher/
 <span style="color:red">**[IMPORTANT]** All Pull Requests must include tests for new functionality. PRs without adequate test coverage may be rejected.</span>
 
 ## Modify the frontend
-If you need to modify the frontend `/Watcher/Watcher/frontend`:
+The React sources are in `/Watcher/Watcher/frontend/src`. With the dev stack running (`make dev`), the `frontend` container rebuilds the bundle (`/Watcher/Watcher/frontend/static/frontend/main.js`) every time you save a file: refresh your browser to see the change. Follow the build with `make dev-logs`.
 
-From `/Watcher/Watcher/`, run the command below:
-
-    npm run dev
-
-Let this command run in background. 
-Now, when modifying some frontend ReactJs files it will automatically build them into one file (`/Watcher/Watcher/frontend/static/frontend/main.js`).
-
-<span style="color:red">**[IMPORTANT]** When **commit** you have to run **1 time** the command below:</span>
-
-    npm run build
+The bundle is **not versioned**: there is nothing to build before committing. The Docker image builds it (`npm run build`) from the sources.
 
 ## Migrations: Change the database schema
 Migrations are Django’s way of propagating changes you make to your models 
@@ -1564,7 +1498,8 @@ There are several commands which you will use to interact with migrations and Dj
 ### Change a model (adding a field, deleting a model...)
 When you are **making a change to a model**, for instance, adding a new field to: **/Watcher/Watcher/data_leak/models.py**
 Then, you need to create a new migration based on the changes you have made:
-- Go to **/Watcher/Watcher/** and run this command: `python3 manage.py makemigrations`
+- From the `deployment/` directory, with the dev stack running, run: `docker compose exec watcher python manage.py makemigrations`
+- The new migration file is written to your sources by the container, as `root`: give it back to your user with `sudo chown -R $(id -u):$(id -g) ../Watcher/Watcher/*/migrations`
 
 <span style="color:red"> **[IMPORTANT]** Run the `makemigrations` command **only once**</span>, when you have made **all the changes**. 
 Otherwise, it will create **several unnecessary migration files**.
@@ -1572,10 +1507,12 @@ Otherwise, it will create **several unnecessary migration files**.
 ## Build the documentation
 Modify some function comments or the `/Watcher/README.md` file.
 
-Go to `/Watcher/docs` and run:
-   
-     ./build_the_docs.sh
+From the `deployment/` directory, run:
 
-When commit please add the all `/Watcher/docs` folder and the `README.md` file:
+    make docs
 
-    git add ../docs ../README.md
+It runs `Watcher/docs/build_the_docs.sh` inside the `watcher:dev` image, which already contains Sphinx and every dependency the API pages import: nothing to install on your machine. The first run builds that image (it is reused by `make dev`). The HTML is written to `/Watcher/docs/_build/html`.
+
+When commit please add the all `/Watcher/docs` folder and the `README.md` file (from the repository root):
+
+    git add Watcher/docs Watcher/README.md

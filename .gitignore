@@ -326,6 +326,8 @@ deployment/certificates/certfile.pem
 deployment/certificates/keyfile.pem
 deployment/certificates/rootcafile.pem
 deployment/certificates/*/
+# Database dumps created by make backup
+deployment/backups/
 db_watcher/
 Watcher/Watcher/static/
 .worktrees/

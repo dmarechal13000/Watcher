@@ -37,8 +37,8 @@ done
 # Build the doc (clean first so pages removed/renamed since the last build
 # don't leave stale orphaned HTML/doctree files behind in _build/)
 cd ../docs/
-make clean
-make html
+sphinx-build -M clean . _build
+sphinx-build -M html . _build
 cd ../Watcher
 
 i=0

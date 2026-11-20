@@ -167,8 +167,10 @@ class EnvironmentVariableConfigTest(TestCase):
             ('465', 465),
         ]
         
+        # Set EMAIL_PORT explicitly: the deployed container already defines it from .env
         for input_val, expected in test_cases:
-            result = int(os.environ.get('EMAIL_PORT', input_val))
+            with patch.dict(os.environ, {'EMAIL_PORT': input_val}):
+                result = int(os.environ.get('EMAIL_PORT', 25))
             self.assertEqual(result, expected)
             self.assertIsInstance(result, int)
 

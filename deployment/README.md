@@ -9,26 +9,32 @@ This folder contains the Docker Compose deployment for Watcher.
 
 ## Configuration
 
-All deployment configuration is centralized in:
+Watcher is configured by two env files, each created from a committed
+`.env.example` template and never committed itself:
 
-- `.env.example` (template, committed)
-- `.env` (real values, local only)
+| File | Contains |
+|---|---|
+| `deployment/.env` (from `deployment/.env.example`) | Everything Docker Compose needs: image versions, ports, `DOMAIN_CORP`, network, `TZ`, `DB_*`, `SEARX_*`, `CA_PATH`, `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY` |
+| `${WATCHER_PATH}/.env` (from `../.env.example`) | Django application settings: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `ALLOWED_HOSTS`, connectors, LDAP/OIDC, `DATA_LEAK_SEARX_URL`... |
 
-Initialize your local configuration once:
+Initialize them once:
 
 ```bash
-cp .env.example .env
+cp ../.env.example ../.env
+make init      # creates deployment/.env from .env.example if missing
 ```
 
-Important secrets are managed directly in `deployment/.env`:
+The `watcher` container loads both files, `deployment/.env` **last**: a
+variable defined in both is silently overridden by `deployment/.env`.
+**Define each variable in one file only.**
 
-- `DJANGO_SECRET_KEY`
-- `DB_NAME`
-- `DB_USER`
-- `DB_PASSWORD`
-- `DB_ROOT_PASSWORD`
+Important secrets:
 
-The Watcher service also reads `${WATCHER_PATH}/.env` for application-specific variables.
+- `DJANGO_SECRET_KEY`: root `.env` (when empty, Django falls back to a
+  default key that is public in the source code)
+- `DB_USER`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`: `deployment/.env`, set them
+  **before the first start** (they are only applied when the database is
+  created)
 
 ## Initialization
 
@@ -61,12 +67,35 @@ Equivalent manual start:
 docker compose --env-file .env up -d
 ```
 
+The `watcher` container runs **gunicorn** with a single worker and 8 threads
+(`Watcher/Watcher/gunicorn.conf.py`). Keep a single worker: the background
+jobs (APScheduler) run inside the web process, so every additional worker
+would run every job again.
+
+## Local development
+
+`compose.dev.yaml` adds a development stack on top of `docker-compose.yml`,
+with hot reload:
+
+```bash
+make dev        # build watcher:dev from ../Watcher and start the stack
+make dev-logs   # follow the watcher (Django) and frontend (webpack) logs
+make dev-down   # stop it
+make docs       # build the Sphinx documentation (Watcher/docs/_build) in the watcher:dev image
+```
+
+- `watcher`: built from your local code, runs `manage.py runserver` on the
+  bind-mounted sources (restarts on Python changes), `DJANGO_DEBUG=True`.
+- `frontend`: runs `npm run dev` (webpack watch) on the same sources, as your
+  user; `npm ci` only runs when `package-lock.json` changed. Set
+  `WATCHPACK_POLLING=true` if file changes are not detected.
+
 ## Project structure
 
 ```
 .
 ├── docker-compose.yml
-├── docker-compose.overide.yml
+├── compose.dev.yaml
 ├── compose_apps.yaml
 ├── compose_databases.yaml
 ├── compose_reverse_proxy.yaml
@@ -95,7 +124,9 @@ The `watcher` service mounts each CA file into
 `/usr/local/share/ca-certificates/` (as a separate `.crt` file per CA) and
 runs `update-ca-certificates` at container startup. This merges every
 mounted CA with the system's public trust store into
-`/etc/ssl/certs/ca-certificates.crt`, which `REQUESTS_CA_BUNDLE` points to —
+`/etc/ssl/certs/ca-certificates.crt`, which `REQUESTS_CA_BUNDLE` and the
+container's `CA_PATH` point to (`CA_PATH` in `deployment/.env` is the host
+certificates directory, the container gets the bundle path instead) —
 it **extends** the trust store instead of replacing it, so public HTTPS
 endpoints (RSS feeds, CVE APIs, ransomware.live, etc.) keep working
 alongside internal ones.
@@ -116,9 +147,8 @@ start.
 
 ### Proxy settings and the CertStream / SearxNG services
 
-- Set `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` in `deployment/.env`. That file is
-  loaded **last**, so it wins over `${WATCHER_PATH}/.env` on every key they share, and it
-  is the one the compose file reads for `${NO_PROXY}`.
+- Set `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` in `deployment/.env` only: the
+  compose files read them from there, and pass them to the containers.
 - The `watcher` container always bypasses the proxy for `searxng`, `db_watcher` and
   `certstream`: there is no need to list them in `NO_PROXY`.
 - **SearxNG settings.** `SEARX_PATH` must be the directory that directly contains

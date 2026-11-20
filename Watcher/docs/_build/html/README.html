@@ -125,90 +125,85 @@
 <hr class="docutils"/>
 <section id="install-watcher">
 <h1>Install Watcher<a class="headerlink" href="#install-watcher" title="Link to this heading"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h1>
-<section id="prerequisites">
-<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#prerequisites'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
-<ul class="simple">
-<li><p><a class="reference external" href="https://docs.docker.com/install/" rel="nofollow noopener">Install docker<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></p></li>
-</ul>
-</section>
 <section id="launch-watcher">
 <h2>Launch watcher<a class="headerlink" href="#launch-watcher" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#launch-watcher'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
-<section id="with-docker-command">
-<h3>With docker command<a class="headerlink" href="#with-docker-command" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#with-docker-command'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
+<p>Watcher is deployed with <strong>Docker Compose</strong>, from the <code class="docutils literal notranslate"><span class="pre">deployment/</span></code> directory of the repository. It starts every service Watcher needs: the Watcher application, its MySQL database, SearxNG (Data Leak searches), CertStream (Certificate Transparency) and Traefik (TLS reverse proxy).</p>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#prerequisites'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
 <ul class="simple">
-<li><p>Grab the <code class="docutils literal notranslate"><span class="pre">docker-compose.yml</span></code>, <code class="docutils literal notranslate"><span class="pre">.env</span></code> files and <code class="docutils literal notranslate"><span class="pre">Searx</span></code> directory (keep the directory structure).</p></li>
-<li><p>According to your existing infrastructure you may need to configure <strong>Watcher settings</strong> using the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file (<a class="reference internal" href="#static-configuration">Static configuration</a>).</p></li>
-<li><p>The application uses <strong>SearxNG</strong> as the meta search engine.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span> <span class="pre">up</span></code></p></li>
-</ul>
-<p>This should run Docker containers.</p>
-<p>Please wait until you see:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">watcher          | db_watcher is up, starting Watcher.
-</span><span id="line-2">watcher          | Performing system checks...
-</span><span id="line-3">watcher          | 
-</span><span id="line-4">watcher          | System check identified no issues (0 silenced).
-</span><span id="line-5">watcher          | May 11, 2026 - 12:26:52
-</span><span id="line-6">watcher          | Django version 6.0.5, using settings 'watcher.settings'
-</span><span id="line-7">watcher          | Starting development server at http://0.0.0.0:9002/
-</span><span id="line-8">watcher          | Quit the server with CONTROL-C.
-</span></code></pre></div>
-</div>
-<ul class="simple">
-<li><p>Try to access Watcher on http://0.0.0.0:9002 or http://yourserverip:9002.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">CONTROL-C</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span> <span class="pre">down</span></code> to stop all containers.</p></li>
+<li><p><a class="reference external" href="https://docs.docker.com/install/" rel="nofollow noopener">Docker<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a> with Docker Compose v2 (<code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span></code> (optional: every <code class="docutils literal notranslate"><span class="pre">make</span></code> target below is a thin wrapper around a script of <code class="docutils literal notranslate"><span class="pre">deployment/scripts/</span></code> or a <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span></code> command, see <a class="reference external" href="https://github.com/thalesgroup-cert/Watcher/blob/master/deployment/Makefile" rel="nofollow noopener">deployment/Makefile<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>)</p></li>
 </ul>
 </section>
-<section id="simplify-method">
-<h3>Simplify method<a class="headerlink" href="#simplify-method" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#simplify-method'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
-<p>Use the deployment helper commands from the repository root:</p>
-<p>Initialize <strong>your local configuration once</strong>: <code class="docutils literal notranslate"><span class="pre">cp</span> <span class="pre">.env.example</span> <span class="pre">.env</span></code></p>
-<p><strong>And after:</strong></p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">cd ../deployment
-</span><span id="line-2">make init
-</span><span id="line-3">make up
+<section id="install">
+<h3>Install<a class="headerlink" href="#install" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#install'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">git clone https://github.com/thalesgroup-cert/Watcher.git
+</span><span id="line-2">cd Watcher
+</span><span id="line-3">
+</span><span id="line-4"># Application settings (Django): edit it afterwards, see "Static configuration" below
+</span><span id="line-5">cp .env.example .env
+</span><span id="line-6">
+</span><span id="line-7">cd deployment
+</span><span id="line-8">make init     # creates deployment/.env, the network config check and the TLS certificates
+</span><span id="line-9">make up       # pulls the images and starts the stack
 </span></code></pre></div>
 </div>
-<p><strong>On first run</strong>:</p>
+<p><strong>On first run</strong>, initialize the database and create the first administrator:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">make migrate
 </span><span id="line-2">make superuser
 </span><span id="line-3">make populate-db
 </span></code></pre></div>
 </div>
-<p>Then <strong>access Watcher on</strong>:</p>
-<ul class="simple">
-<li><p>http://0.0.0.0:9020 (default deployment port)</p></li>
-<li><p>or your configured domain/port from <code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code></p></li>
-</ul>
-<p>Deployment configuration is centralized in <code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code> (generated from <code class="docutils literal notranslate"><span class="pre">deployment/.env.example</span></code>).
-Set your secrets there, especially <code class="docutils literal notranslate"><span class="pre">DJANGO_SECRET_KEY</span></code>, <code class="docutils literal notranslate"><span class="pre">DB_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">DB_USER</span></code>, <code class="docutils literal notranslate"><span class="pre">DB_PASSWORD</span></code>, and <code class="docutils literal notranslate"><span class="pre">DB_ROOT_PASSWORD</span></code>.</p>
+<p>Then <strong>access Watcher on</strong> http://localhost:9020 (<code class="docutils literal notranslate"><span class="pre">WATCHER_PORT</span></code> in <code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code>). This port is only bound to the host’s loopback interface: to access Watcher from other machines, go through Traefik (see <a class="reference internal" href="#access-watcher-remotely-within-your-server-instance">Access Watcher remotely</a>).</p>
+<p>Stop the stack with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">down</span></code>.</p>
+</section>
+<section id="the-two-configuration-files">
+<h3>The two configuration files<a class="headerlink" href="#the-two-configuration-files" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#the-two-configuration-files'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
+<p>Watcher is configured by <strong>two</strong> <code class="docutils literal notranslate"><span class="pre">.env</span></code> files, both created from a committed <code class="docutils literal notranslate"><span class="pre">.env.example</span></code> template and never committed themselves. <strong>Each variable belongs to exactly one of them:</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>File</p></th>
+<th class="head"><p>Contains</p></th>
+<th class="head"><p>Examples</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code></p></td>
+<td><p>Everything Docker Compose needs (also passed to the Watcher container)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">WATCHER_VERSION</span></code>, <code class="docutils literal notranslate"><span class="pre">WATCHER_PORT</span></code>, <code class="docutils literal notranslate"><span class="pre">DOMAIN_CORP</span></code>, network, <code class="docutils literal notranslate"><span class="pre">TZ</span></code>, <code class="docutils literal notranslate"><span class="pre">DB_USER</span></code>, <code class="docutils literal notranslate"><span class="pre">DB_PASSWORD</span></code>, <code class="docutils literal notranslate"><span class="pre">DB_ROOT_PASSWORD</span></code>, <code class="docutils literal notranslate"><span class="pre">SEARX_*</span></code>, <code class="docutils literal notranslate"><span class="pre">CA_PATH</span></code>, <code class="docutils literal notranslate"><span class="pre">HTTP_PROXY</span></code>, <code class="docutils literal notranslate"><span class="pre">HTTPS_PROXY</span></code>, <code class="docutils literal notranslate"><span class="pre">NO_PROXY</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">.env</span></code> (repository root)</p></td>
+<td><p>Django application settings</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DJANGO_SECRET_KEY</span></code>, <code class="docutils literal notranslate"><span class="pre">DJANGO_DEBUG</span></code>, <code class="docutils literal notranslate"><span class="pre">ALLOWED_HOSTS</span></code>, <code class="docutils literal notranslate"><span class="pre">CSRF_TRUSTED_ORIGINS</span></code>, SMTP, LDAP, OIDC, MISP, TheHive, Slack, Citadel, LLM providers, CyberWatch feeds, <code class="docutils literal notranslate"><span class="pre">DATA_LEAK_SEARX_URL</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div><p><strong>Warning:</strong> do not define a variable in both files. <code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code> is loaded last and silently overrides the root <code class="docutils literal notranslate"><span class="pre">.env</span></code>.</p>
+</div></blockquote>
 </section>
 <section id="migrate">
 <h3>Migrate<a class="headerlink" href="#migrate" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#migrate'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
 <p>Updates the state of the database in accordance with all current models and migrations. Migrations, their relationships
 with applications…</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose run watcher bash
-</span><span id="line-3">python manage.py migrate
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make migrate
 </span></code></pre></div>
 </div>
 </section>
 <section id="create-admin-user">
 <h3>Create admin user<a class="headerlink" href="#create-admin-user" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#create-admin-user'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
 <p>You will need to create the first superuser to access the <code class="docutils literal notranslate"><span class="pre">/admin</span></code> page.</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose run watcher bash
-</span><span id="line-3">python manage.py createsuperuser
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make superuser
 </span></code></pre></div>
 </div>
 </section>
 <section id="populate-your-database">
 <h3>Populate your database<a class="headerlink" href="#populate-your-database" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#populate-your-database'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
 <p>Populate your database with hundred of banned words and RSS sources related to Cyber Security.</p>
-<p>Use <code class="docutils literal notranslate"><span class="pre">populate_db</span></code> script:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose run watcher bash
-</span><span id="line-3">python manage.py populate_db
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make populate-db
 </span></code></pre></div>
 </div>
 </section>
@@ -221,41 +216,60 @@ with applications…</p>
 <section id="static-configuration">
 <h2>Static configuration<a class="headerlink" href="#static-configuration" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#static-configuration'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
 <p>Most of the settings can be modified from the <code class="docutils literal notranslate"><span class="pre">/admin</span></code> page.</p>
-<p>There are other settings located in the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file that you can configure.</p>
+<p>There are other settings located in the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file at the repository root that you can configure. Unless stated otherwise, the variables of this section belong to that file (see <a class="reference internal" href="#the-two-configuration-files">The two configuration files</a>).</p>
 <p>Many of the external-integration settings below (SMTP, Slack, MISP, TheHive, Citadel, CyberWatch feeds, LLM providers) can also be viewed, overridden, and tested live from the <a class="reference internal" href="#connectors">Connectors</a> page, without editing the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file.</p>
 <section id="production-settings-important">
 <h3>Production Settings [Important]<a class="headerlink" href="#production-settings-important" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#production-settings-important'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
-<p>In production please put DJANGO_DEBUG environment variable to <strong>False</strong> in the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file:</p>
+<p>Django’s debug mode is <strong>off by default</strong>: it is only enabled when <code class="docutils literal notranslate"><span class="pre">DJANGO_DEBUG</span></code> is explicitly set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, which must never be done in production. Keep it off in the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">DJANGO_DEBUG=False
 </span></code></pre></div>
 </div>
 <p>Also, the <strong>Django secret key</strong> must be a <strong>large random value</strong> and it must be kept secret.
-There is one by default but consider to change it in the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">DJANGO_SECRET_KEY=[large random value]
+When it is left empty, Django falls back to a default key that is public in the source code: <strong>always set it</strong> in the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># generate one with: openssl rand -base64 33
+</span><span id="line-2">DJANGO_SECRET_KEY=[large random value]
 </span></code></pre></div>
 </div>
-<p>Time Zone settings in the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file:</p>
+<p>Change the database credentials too, in <code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code>, <strong>before the first start</strong> (they are only applied when the database is created):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">DB_PASSWORD=[strong password]
+</span><span id="line-2">DB_ROOT_PASSWORD=[another strong password]
+</span></code></pre></div>
+</div>
+<p>Time Zone settings in the <code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code> file:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># Time Zone
 </span><span id="line-2">TZ=Europe/Paris
 </span></code></pre></div>
 </div>
 <p>If you have modified some of these parameters, don’t forget to restart all containers:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose up
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make down
+</span><span id="line-3">make up
 </span></code></pre></div>
 </div>
 </section>
 <section id="access-watcher-remotely-within-your-server-instance">
 <h3>Access Watcher remotely within your server instance<a class="headerlink" href="#access-watcher-remotely-within-your-server-instance" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#access-watcher-remotely-within-your-server-instance'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
-<p>In case of <strong>“Bad Request” Error</strong> when accessing Watcher web interface, fill <code class="docutils literal notranslate"><span class="pre">ALLOWED_HOST</span></code> variable (in <code class="docutils literal notranslate"><span class="pre">.env</span></code> file) with your Watcher Server Instance <strong>IP</strong> / or your <strong>FQDN</strong>.</p>
-<p>It is limited to a <strong>single IP address</strong> / <strong>single FQDN</strong>.</p>
-<p>Please use this syntax:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">ALLOWED_HOST=X.X.X.X or ALLOWED_HOST=mywebsite.com
+<p>The Watcher port (<code class="docutils literal notranslate"><span class="pre">WATCHER_PORT</span></code>, 9020 by default) only listens on the host’s loopback interface. Remote users access Watcher <strong>through Traefik</strong>, in HTTPS on port 443:</p>
+<ol class="arabic">
+<li><p>In <code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code>, set <code class="docutils literal notranslate"><span class="pre">DOMAIN_CORP</span></code> to the FQDN users will type (e.g. <code class="docutils literal notranslate"><span class="pre">watcher.mycompany.com</span></code>), and make it resolve to your server.</p></li>
+<li><p>Put your TLS certificate and key in <code class="docutils literal notranslate"><span class="pre">deployment/certificates/</span></code> as <code class="docutils literal notranslate"><span class="pre">certfile.pem</span></code> and <code class="docutils literal notranslate"><span class="pre">keyfile.pem</span></code> (<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">init</span></code> generates a self-signed pair by default).</p></li>
+<li><p>In the root <code class="docutils literal notranslate"><span class="pre">.env</span></code> file, fill <code class="docutils literal notranslate"><span class="pre">ALLOWED_HOSTS</span></code> and <code class="docutils literal notranslate"><span class="pre">CSRF_TRUSTED_ORIGINS</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"> # Traefik forwards requests to Django with the Host header "watcher": keep it in the list
+</span><span id="line-2"> ALLOWED_HOSTS=watcher,watcher.mycompany.com
+</span><span id="line-3"> # Single FQDN, without the https:// scheme
+</span><span id="line-4"> CSRF_TRUSTED_ORIGINS=watcher.mycompany.com
 </span></code></pre></div>
 </div>
+</li>
+</ol>
+<p><code class="docutils literal notranslate"><span class="pre">ALLOWED_HOSTS</span></code> accepts several IP addresses / FQDNs separated by commas. A <strong>“Bad Request” (400) error</strong> when accessing Watcher means the requested host is missing from it.</p>
+<blockquote>
+<div><p><strong>Note:</strong> <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">init</span></code> writes <code class="docutils literal notranslate"><span class="pre">DOMAIN_CORP</span></code> into <code class="docutils literal notranslate"><span class="pre">traefik/dynamic/tls.yaml</span></code> only once (it replaces the <code class="docutils literal notranslate"><span class="pre">Host(`watcher`)</span></code> placeholder). To change the domain later, edit the <code class="docutils literal notranslate"><span class="pre">Host(...)</span></code> rule of that file by hand.</p>
+</div></blockquote>
 <p>Now, you can restart your instance and the parameters will be taken into account:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose up
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make down
+</span><span id="line-3">make up
 </span></code></pre></div>
 </div>
 </section>
@@ -270,8 +284,9 @@ There is one by default but consider to change it in the <code class="docutils l
 </span></code></pre></div>
 </div>
 <p>Now, you can restart your instance and the parameters will be taken into account:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose up
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make down
+</span><span id="line-3">make up
 </span></code></pre></div>
 </div>
 </section>
@@ -288,8 +303,9 @@ There is one by default but consider to change it in the <code class="docutils l
 </span></code></pre></div>
 </div>
 <p>Now, you can restart your instance and the parameters will be taken into account:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose up
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make down
+</span><span id="line-3">make up
 </span></code></pre></div>
 </div>
 </section>
@@ -340,8 +356,9 @@ There is one by default but consider to change it in the <code class="docutils l
 </span></code></pre></div>
 </div>
 <p>Now, you can restart your instance and the parameters will be taken into account:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose up
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make down
+</span><span id="line-3">make up
 </span></code></pre></div>
 </div>
 </section>
@@ -359,8 +376,9 @@ There is one by default but consider to change it in the <code class="docutils l
 </span></code></pre></div>
 </div>
 <p>Now, you can restart your instance and the parameters will be taken into account:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose up
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make down
+</span><span id="line-3">make up
 </span></code></pre></div>
 </div>
 </section>
@@ -408,8 +426,9 @@ There is one by default but consider to change it in the <code class="docutils l
 </span></code></pre></div>
 </div>
 <p>Now, you can restart your instance and the parameters will be taken into account:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose up
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make down
+</span><span id="line-3">make up
 </span></code></pre></div>
 </div>
 </section>
@@ -433,25 +452,35 @@ There is one by default but consider to change it in the <code class="docutils l
 <h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#troubleshooting'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
 <section id="remove-the-database">
 <h3>Remove the database<a class="headerlink" href="#remove-the-database" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#remove-the-database'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
-<p>You may want to <strong>reset</strong> your database entirely, in case of troubleshooting or other. To do this, you need to remove the database stored in your host system and restart the instance:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker volume rm watcher-project_db_data
-</span><span id="line-3">docker volume rm watcher-project_db_log
+<p>You may want to <strong>reset</strong> your database entirely, in case of troubleshooting or other. The database files are stored on the host, in the <code class="docutils literal notranslate"><span class="pre">db_watcher/</span></code> directory at the repository root. <strong>This deletes all your data</strong>: make a backup first with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">backup</span></code> if needed.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make down
+</span><span id="line-3">sudo rm -rf ../db_watcher/data
+</span><span id="line-4">make up
 </span></code></pre></div>
 </div>
-<p>Now, you can rebuild the image and the parameters will be taken into account:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose up
-</span></code></pre></div>
-</div>
-<p>Don’t forget to <a class="reference internal" href="#migrate">migrate</a>.</p>
+<p>Don’t forget to <a class="reference internal" href="#migrate">migrate</a>, and then to create a <a class="reference internal" href="#create-admin-user">superuser</a> again.</p>
 </section>
 <section id="useful-commands">
 <h3>Useful commands<a class="headerlink" href="#useful-commands" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#useful-commands'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
-<p>Use <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span> <span class="pre">up</span> <span class="pre">-d</span></code> if you want to run it in background.</p>
-<p>Run interactive shell session on the Watcher container:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose run watcher bash
+<p>From the <code class="docutils literal notranslate"><span class="pre">deployment/</span></code> directory:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># Status of the containers
+</span><span id="line-2">docker compose ps
+</span><span id="line-3">
+</span><span id="line-4"># Follow the Watcher logs
+</span><span id="line-5">docker compose logs -f watcher
+</span><span id="line-6">
+</span><span id="line-7"># Interactive shell in the running Watcher container
+</span><span id="line-8">docker compose exec watcher bash
+</span><span id="line-9">
+</span><span id="line-10"># Django shell
+</span><span id="line-11">docker compose exec watcher python manage.py shell
+</span><span id="line-12">
+</span><span id="line-13"># Backup the database into deployment/backups/
+</span><span id="line-14">make backup
 </span></code></pre></div>
 </div>
+<p>After editing a <code class="docutils literal notranslate"><span class="pre">.env</span></code> file, recreate the containers with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">down</span></code> then <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">up</span></code>: <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span> <span class="pre">restart</span></code> does not reload <code class="docutils literal notranslate"><span class="pre">.env</span></code> files.</p>
 </section>
 </section>
 </section>
@@ -532,8 +561,9 @@ There is one by default but consider to change it in the <code class="docutils l
 </li>
 </ol>
 <p>Now, you can restart your instance and the parameters will be taken into account:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose up
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make down
+</span><span id="line-3">make up
 </span></code></pre></div>
 </div>
 </section>
@@ -561,8 +591,9 @@ There is one by default but consider to change it in the <code class="docutils l
 <li><p>The <strong>second custom</strong> field is used to track the email sender and is defined as <code class="docutils literal notranslate"><span class="pre">THE_HIVE_EMAIL_SENDER</span></code>. By default, this is set to watcher@watcher.com. You can update this value in your .env file as needed.</p></li>
 </ol>
 <p>Now, you can restart your instance and the parameters will be taken into account:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose up
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make down
+</span><span id="line-3">make up
 </span></code></pre></div>
 </div>
 </section>
@@ -590,8 +621,9 @@ There is one by default but consider to change it in the <code class="docutils l
 <li><p>Lastly, create the channel in Slack if you haven’t already and save its name as <code class="docutils literal notranslate"><span class="pre">SLACK_CHANNEL</span></code> in the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file.</p></li>
 </ol>
 <p>Now, you can restart your instance and the parameters will be taken into account:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose up
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make down
+</span><span id="line-3">make up
 </span></code></pre></div>
 </div>
 </section>
@@ -613,8 +645,9 @@ There is one by default but consider to change it in the <code class="docutils l
 <li><p>For the <code class="docutils literal notranslate"><span class="pre">CITADEL_URL</span></code> variable, if you’re using a public instance, the URL should be: <a class="reference external" href="https://join.citadel.team/" rel="nofollow noopener">https://join.citadel.team/<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>. Otherwise, enter your customized instance URL.</p></li>
 </ol>
 <p>Now, you can restart your instance and the parameters will be taken into account:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose up
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make down
+</span><span id="line-3">make up
 </span></code></pre></div>
 </div>
 </section>
@@ -1135,7 +1168,7 @@ There is one by default but consider to change it in the <code class="docutils l
 <section id="specific-details">
 <h3>Specific Details<a class="headerlink" href="#specific-details" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#specific-details'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
 <p>To obtain detailed information about a specific item, such as an alert, a monitored site, or any other entity in the system, you can access its details by appending <code class="docutils literal notranslate"><span class="pre">/(?P&lt;pk&gt;[^/.]+)/$</span></code> to the end of the corresponding API URL.</p>
-<p>For instance, let’s say you want to retrieve information about an alert with the ID “1”. You would construct the URL as follows: <code class="docutils literal notranslate"><span class="pre">http://0.0.0.0:9002/api/site_monitoring/alert/1</span></code></p>
+<p>For instance, let’s say you want to retrieve information about an alert with the ID “1”. You would construct the URL as follows: <code class="docutils literal notranslate"><span class="pre">http://localhost:9020/api/site_monitoring/alert/1</span></code></p>
 <p>By making a GET request to this URL using your web browser, CURL, or any HTTP client, you will receive comprehensive details about the alert with the ID “1”.</p>
 <p>Following this pattern, you can easily navigate and retrieve specific information for any item in the system, ensuring efficient use of the available API endpoints.</p>
 </section>
@@ -1489,50 +1522,74 @@ the version of your MISP instance.</p>
 </section>
 <section id="update-watcher">
 <h1>Update Watcher<a class="headerlink" href="#update-watcher" title="Link to this heading"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h1>
-<p>Verify that your local files <code class="docutils literal notranslate"><span class="pre">/.env</span></code>, <code class="docutils literal notranslate"><span class="pre">/docker-compose.yml</span></code> and <code class="docutils literal notranslate"><span class="pre">/Searx/</span></code> are <strong>up-to-date</strong>.</p>
 <blockquote>
-<div><p><strong>Note:</strong> Watcher uses the official image from <strong>GitHub Container Registry (GHCR)</strong>: <code class="docutils literal notranslate"><span class="pre">ghcr.io/thalesgroup-cert/watcher:latest</span></code></p>
+<div><p><strong>Note:</strong> Watcher uses the official image from <strong>GitHub Container Registry (GHCR)</strong>: <code class="docutils literal notranslate"><span class="pre">ghcr.io/thalesgroup-cert/watcher</span></code>, at the version set by <code class="docutils literal notranslate"><span class="pre">WATCHER_VERSION</span></code> in <code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code> (<code class="docutils literal notranslate"><span class="pre">latest</span></code> by default).</p>
 </div></blockquote>
 <section id="update-process">
 <h2>Update Process<a class="headerlink" href="#update-process" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#update-process'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
-<p>To update Watcher image please follow the instructions below:</p>
-<ul>
-<li><p>Stop all containers:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="w">  </span>docker<span class="w"> </span>compose<span class="w"> </span>down
+<p>From the repository root, get the latest deployment files (<code class="docutils literal notranslate"><span class="pre">deployment/</span></code>, <code class="docutils literal notranslate"><span class="pre">Searx/</span></code>, <code class="docutils literal notranslate"><span class="pre">traefik/</span></code>, <code class="docutils literal notranslate"><span class="pre">.env.example</span></code> templates):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">git pull
 </span></code></pre></div>
 </div>
-</li>
-<li><p>Remove the old docker images:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="w">  </span>docker<span class="w"> </span>rmi<span class="w"> </span>ghcr.io/thalesgroup-cert/watcher:latest
-</span><span id="line-2"><span class="w">  </span>docker<span class="w"> </span>rmi<span class="w"> </span>mysql:8.0.40
-</span><span id="line-3"><span class="w">  </span>docker<span class="w"> </span>rmi<span class="w"> </span>searxng/searxng:latest
-</span><span id="line-4"><span class="w">  </span>docker<span class="w"> </span>rmi<span class="w"> </span>0rickyy0/certstream-server-go:v1.8.2
+<p>Then, from the <code class="docutils literal notranslate"><span class="pre">deployment/</span></code> directory:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">make pull     # pull the newer images
+</span><span id="line-2">make up       # recreate the containers that changed
 </span></code></pre></div>
 </div>
-</li>
-<li><p>Pull the newer docker images:</p></li>
-</ul>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="w">   </span>docker<span class="w"> </span>compose<span class="w"> </span>pull
-</span></code></pre></div>
-</div>
-<ul>
-<li><p>Start the containers:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="w">  </span>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
-</span></code></pre></div>
-</div>
-</li>
-</ul>
-<p>This will update the Watcher project.</p>
+<p>Compare your <code class="docutils literal notranslate"><span class="pre">.env</span></code> files with their <code class="docutils literal notranslate"><span class="pre">.env.example</span></code> templates and add the new variables, if any.</p>
 </section>
 <section id="migrate-populate-the-database-mandatory">
 <h2>Migrate &amp; Populate the database (mandatory)<a class="headerlink" href="#migrate-populate-the-database-mandatory" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#migrate-populate-the-database-mandatory'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
 <p>Updates the state of the database in accordance with all current models and migrations. Populate your database with hundred of banned words and RSS sources related to Cyber Security.</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker compose down
-</span><span id="line-2">docker compose run watcher bash
-</span><span id="line-3">python manage.py migrate
-</span><span id="line-4">python manage.py populate_db
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># from the deployment/ directory
+</span><span id="line-2">make migrate
+</span><span id="line-3">make populate-db
 </span></code></pre></div>
 </div>
+</section>
+<section id="migrating-from-the-root-docker-compose-yml-breaking-change">
+<h2>Migrating from the root docker-compose.yml (breaking change)<a class="headerlink" href="#migrating-from-the-root-docker-compose-yml-breaking-change" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#migrating-from-the-root-docker-compose-yml-breaking-change'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
+<p>Older versions were started with a <code class="docutils literal notranslate"><span class="pre">docker-compose.yml</span></code> file at the repository root, with a git-tracked root <code class="docutils literal notranslate"><span class="pre">.env</span></code> file. That file has been removed: Watcher is now deployed <strong>only</strong> from <code class="docutils literal notranslate"><span class="pre">deployment/</span></code>. Follow these steps <strong>in this order</strong> if your instance still runs with the root <code class="docutils literal notranslate"><span class="pre">docker-compose.yml</span></code>.</p>
+<ol class="arabic">
+<li><p><strong>Backup the database</strong>, from the repository root, while the old stack is still running:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"> docker exec db_watcher sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" db_watcher' &gt; ../watcher-backup.sql
+</span></code></pre></div>
+</div>
+</li>
+<li><p><strong>Stop the old stack</strong>, before pulling (the file describing it disappears with the update):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"> docker compose down
+</span></code></pre></div>
+</div>
+</li>
+<li><p><strong>Update the code while keeping your settings.</strong> The root <code class="docutils literal notranslate"><span class="pre">.env</span></code> is no longer tracked by git (it became <code class="docutils literal notranslate"><span class="pre">.env.example</span></code>), so <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">pull</span></code> refuses to run while it contains local changes:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"> cp .env ../watcher.env.backup
+</span><span id="line-2"> git checkout -- .env
+</span><span id="line-3"> git pull
+</span><span id="line-4"> cp ../watcher.env.backup .env
+</span></code></pre></div>
+</div>
+</li>
+<li><p><strong>Split your settings between the two files</strong> (see <a class="reference internal" href="#the-two-configuration-files">The two configuration files</a>):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"> cd deployment
+</span><span id="line-2"> make init     # creates deployment/.env
+</span></code></pre></div>
+</div>
+<ul class="simple">
+<li><p>Copy the values of <code class="docutils literal notranslate"><span class="pre">TZ</span></code>, <code class="docutils literal notranslate"><span class="pre">DB_USER</span></code>, <code class="docutils literal notranslate"><span class="pre">DB_PASSWORD</span></code>, <code class="docutils literal notranslate"><span class="pre">DB_ROOT_PASSWORD</span></code>, <code class="docutils literal notranslate"><span class="pre">HTTP_PROXY</span></code> and <code class="docutils literal notranslate"><span class="pre">HTTPS_PROXY</span></code> from your root <code class="docutils literal notranslate"><span class="pre">.env</span></code> to <code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code>.</p></li>
+<li><p>Then <strong>remove</strong> these variables from the root <code class="docutils literal notranslate"><span class="pre">.env</span></code>, as well as <code class="docutils literal notranslate"><span class="pre">CA_PATH</span></code>, <code class="docutils literal notranslate"><span class="pre">SEARX_HOSTNAME</span></code>, <code class="docutils literal notranslate"><span class="pre">SEARX_PROTOCOL</span></code>, <code class="docutils literal notranslate"><span class="pre">SEARX_COMMAND</span></code> and <code class="docutils literal notranslate"><span class="pre">NO_PROXY</span></code> (the <code class="docutils literal notranslate"><span class="pre">10.10.10.x</span></code> addresses are no longer used).</p></li>
+</ul>
+</li>
+<li><p><strong>Start the new stack and restore the database:</strong></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"> make up
+</span><span id="line-2"> docker exec -i db_watcher sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" db_watcher' &lt; ../../watcher-backup.sql
+</span><span id="line-3"> make migrate
+</span></code></pre></div>
+</div>
+</li>
+<li><p>Watcher is now available on http://localhost:9020 instead of port 9002 (see <a class="reference internal" href="#access-watcher-remotely-within-your-server-instance">Access Watcher remotely</a> for remote access).</p></li>
+</ol>
+<p>Once everything works, the old database volumes can be removed (<code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">volume</span> <span class="pre">ls</span></code> lists them, they end with <code class="docutils literal notranslate"><span class="pre">_db_data</span></code> and <code class="docutils literal notranslate"><span class="pre">_db_log</span></code>).</p>
+<p><strong>Already deploying from <code class="docutils literal notranslate"><span class="pre">deployment/</span></code>?</strong> Your <code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code> was created from an older template: move <code class="docutils literal notranslate"><span class="pre">DJANGO_SECRET_KEY</span></code> to the root <code class="docutils literal notranslate"><span class="pre">.env</span></code>, and remove <code class="docutils literal notranslate"><span class="pre">DJANGO_SECRET_KEY</span></code> and <code class="docutils literal notranslate"><span class="pre">DATA_LEAK_SEARX_URL</span></code> from <code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code> (its empty <code class="docutils literal notranslate"><span class="pre">DATA_LEAK_SEARX_URL</span></code> overrode the root value and disabled Data Leak searches).</p>
 </section>
 <section id="managing-breaking-changes-optional">
 <h2>Managing Breaking Changes (optional)<a class="headerlink" href="#managing-breaking-changes-optional" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#managing-breaking-changes-optional'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
@@ -1587,151 +1644,66 @@ the version of your MISP instance.</p>
 </section>
 <section id="setup-watcher-environment">
 <h2>Setup Watcher environment<a class="headerlink" href="#setup-watcher-environment" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#setup-watcher-environment'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
-<p>Use a Linux server, we recommend the use of a Virtual Machine (Ubuntu 20.04 and Ubuntu 21.10 LTS in our case).</p>
-<p>Then, follow the steps below:</p>
-<ul>
-<li><p><strong>Update and upgrade your machine:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>upgrade<span class="w"> </span>-y
+<p>The development environment runs in Docker too, on the same stack as production (MySQL, SearxNG, CertStream, Traefik), with <strong>hot reload</strong>. You only need <strong>Docker</strong> and <strong>make</strong>: no Python, Node.js or MySQL to install on your machine.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">git clone &lt;your_forked_repository.git&gt;
+</span><span id="line-2">cd Watcher
+</span><span id="line-3">cp .env.example .env
+</span><span id="line-4">
+</span><span id="line-5">cd deployment
+</span><span id="line-6">make init
+</span><span id="line-7">make dev
 </span></code></pre></div>
 </div>
-</li>
-<li><p><strong>Install Python and Node.js:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>python3<span class="w"> </span>python3-pip<span class="w"> </span>-y<span class="w"> </span>
-</span><span id="line-2">sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>nodejs<span class="w"> </span>-y
+<p>On first run:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">make migrate
+</span><span id="line-2">make superuser
+</span><span id="line-3">make populate-db
 </span></code></pre></div>
 </div>
-</li>
-<li><p><strong>Create and activate a Python virtual environment:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv<span class="w"> </span><span class="p">|</span><span class="nb">source</span><span class="w"> </span>.venv/bin/activate
-</span></code></pre></div>
-</div>
-</li>
-<li><p><strong>Pull Watcher code:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">git<span class="w"> </span>clone<span class="w"> </span>&lt;your_forked_repository.git&gt;
-</span></code></pre></div>
-</div>
-</li>
-<li><p><strong>Move to the following directory:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="nb">cd</span><span class="w"> </span>Watcher/Watcher
-</span></code></pre></div>
-</div>
-</li>
-<li><p><strong>Install</strong> <code class="docutils literal notranslate"><span class="pre">python-ldap</span></code> <strong>dependencies:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>libsasl2-dev<span class="w"> </span>python-dev-is-python3<span class="w"> </span>libldap2-dev<span class="w"> </span>libssl-dev
-</span></code></pre></div>
-</div>
-</li>
-<li><p><strong>Install</strong> <code class="docutils literal notranslate"><span class="pre">mysqlclient</span></code> <strong>dependency:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>default-libmysqlclient-dev
-</span></code></pre></div>
-</div>
-</li>
-<li><p><strong>Install Rust (for tokenizers, etc)</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">curl<span class="w"> </span>https://sh.rustup.rs<span class="w"> </span>-sSf<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh<span class="w"> </span>-s<span class="w"> </span>--<span class="w"> </span>-y<span class="w"> </span><span class="p">|</span><span class="nb">source</span><span class="w"> </span><span class="nv">$HOME</span>/.cargo/env<span class="w"> </span>
-</span></code></pre></div>
-</div>
-</li>
-<li><p><strong>Install Python dependencies:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">pip3<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-</span></code></pre></div>
-</div>
-</li>
-<li><p><strong>Install Torch and Torchvision dependencies:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">pip<span class="w"> </span>install<span class="w"> </span>--extra-index-url<span class="w"> </span>https://download.pytorch.org/whl/cpu<span class="w"> </span><span class="nv">torch</span><span class="o">==</span><span class="m">2</span>.13.0<span class="w"> </span><span class="nv">torchvision</span><span class="o">==</span><span class="m">0</span>.28.0<span class="w"> </span><span class="nv">torchaudio</span><span class="o">==</span><span class="m">2</span>.11.0
-</span></code></pre></div>
-</div>
-</li>
-<li><p><strong>Install NLTK/punkt dependency:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="w">  </span>python3<span class="w"> </span>./nltk_dependencies.py
-</span></code></pre></div>
-</div>
+<p>Watcher is available on http://localhost:9020. <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dev</span></code> uses <code class="docutils literal notranslate"><span class="pre">deployment/compose.dev.yaml</span></code> on top of the production stack:</p>
 <ul class="simple">
-<li><p>If you have a proxy, you can configure it in <code class="docutils literal notranslate"><span class="pre">nltk_dependencies.py</span></code> script.</p></li>
+<li><p>the <code class="docutils literal notranslate"><span class="pre">watcher</span></code> image is <strong>built from your local code</strong> (<code class="docutils literal notranslate"><span class="pre">watcher:dev</span></code>) instead of pulled from GHCR, and runs Django’s <code class="docutils literal notranslate"><span class="pre">runserver</span></code> on your bind-mounted sources: <strong>editing a Python file restarts the server</strong>;</p></li>
+<li><p>a <code class="docutils literal notranslate"><span class="pre">frontend</span></code> container runs <code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">run</span> <span class="pre">dev</span></code> (webpack in watch mode): <strong>editing a React file rebuilds the bundle</strong> in a few seconds, refresh your browser;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DJANGO_DEBUG</span></code> is forced to <code class="docutils literal notranslate"><span class="pre">True</span></code> for this stack only, without editing your <code class="docutils literal notranslate"><span class="pre">.env</span></code> files.</p></li>
 </ul>
-</li>
-<li><p><strong>Install Node.js dependencies:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>npm<span class="w"> </span>-y
-</span><span id="line-2">npm<span class="w"> </span>install
-</span></code></pre></div>
-</div>
-</li>
-<li><p><strong>Install MySQL:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>mysql-server<span class="w"> </span>-y
-</span><span id="line-2">sudo<span class="w"> </span>mysql_secure_installation
-</span></code></pre></div>
-</div>
-<ul class="simple">
-<li><p>Enter root password.</p></li>
-<li><p>You may now enter <code class="docutils literal notranslate"><span class="pre">Y</span></code> and <code class="docutils literal notranslate"><span class="pre">ENTER</span></code>. Accept all fields. This will remove some anonymous users and the test database,<br/>
-disable remote root logins, and load these new rules so that MySQL immediately respects any changes made.</p></li>
-</ul>
-</li>
-</ul>
-<p><strong>Create &amp; Configure Watcher database:</strong></p>
-<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="w">  </span><span class="n">sudo</span><span class="w"> </span><span class="n">mysql</span><span class="w"> </span>
-</span><span id="line-2"><span class="w">  </span><span class="k">CREATE</span><span class="w"> </span><span class="k">USER</span><span class="w"> </span><span class="s1">'watcher'</span><span class="o">@</span><span class="s1">'localhost'</span><span class="w"> </span><span class="n">IDENTIFIED</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="s1">'Ee5kZm4fWWAmE9hs!'</span><span class="p">;</span>
-</span><span id="line-3"><span class="w">  </span><span class="k">GRANT</span><span class="w"> </span><span class="k">ALL</span><span class="w"> </span><span class="k">PRIVILEGES</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="o">*</span><span class="p">.</span><span class="o">*</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="s1">'watcher'</span><span class="o">@</span><span class="s1">'localhost'</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="k">GRANT</span><span class="w"> </span><span class="k">OPTION</span><span class="p">;</span>
-</span><span id="line-4"><span class="w">  </span><span class="k">CREATE</span><span class="w"> </span><span class="k">DATABASE</span><span class="w"> </span><span class="n">db_watcher</span><span class="p">;</span>
-</span><span id="line-5"><span class="w">  </span><span class="n">use</span><span class="w"> </span><span class="n">db_watcher</span><span class="p">;</span>
-</span><span id="line-6"><span class="w">  </span><span class="n">exit</span>
-</span></code></pre></div>
-</div>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">systemctl<span class="w"> </span>status<span class="w"> </span>mysql.service
-</span></code></pre></div>
-</div>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="w">  </span><span class="nb">cd</span><span class="w"> </span>Watcher/Watcher
-</span></code></pre></div>
-</div>
-<p>In <code class="docutils literal notranslate"><span class="pre">settings.py</span></code> change <code class="docutils literal notranslate"><span class="pre">HOST</span></code> variable to <code class="docutils literal notranslate"><span class="pre">localhost</span></code>:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">  <span class="n">DATABASES</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-2">    <span class="s1">'default'</span><span class="p">:</span> <span class="p">{</span>
-</span><span id="line-3">      <span class="s1">'ENGINE'</span><span class="p">:</span> <span class="s1">'django.db.backends.mysql'</span><span class="p">,</span>
-</span><span id="line-4">      <span class="s1">'CONN_MAX_AGE'</span><span class="p">:</span> <span class="mi">3600</span><span class="p">,</span>
-</span><span id="line-5">      <span class="s1">'NAME'</span><span class="p">:</span> <span class="s1">'db_watcher'</span><span class="p">,</span>
-</span><span id="line-6">      <span class="s1">'USER'</span><span class="p">:</span> <span class="s1">'watcher'</span><span class="p">,</span>
-</span><span id="line-7">      <span class="s1">'PASSWORD'</span><span class="p">:</span> <span class="s1">'Ee5kZm4fWWAmE9hs!'</span><span class="p">,</span>
-</span><span id="line-8">      <span class="s1">'HOST'</span><span class="p">:</span> <span class="s1">'localhost'</span><span class="p">,</span>
-</span><span id="line-9">      <span class="s1">'PORT'</span><span class="p">:</span> <span class="s1">'3306'</span><span class="p">,</span>
-</span><span id="line-10">      <span class="s1">'OPTIONS'</span><span class="p">:</span> <span class="p">{</span>
-</span><span id="line-11">        <span class="s1">'init_command'</span><span class="p">:</span> <span class="s2">"SET sql_mode='STRICT_TRANS_TABLES'"</span><span class="p">,</span>
-</span><span id="line-12">      <span class="p">},</span>
-</span><span id="line-13">    <span class="p">}</span>
-</span><span id="line-14">  <span class="p">}</span>
-</span></code></pre></div>
-</div>
-<ul class="simple">
-<li><p><span style="color:red"><strong>[IMPORTANT]</strong> When <strong>commit</strong> put <code class="docutils literal notranslate"><span class="pre">HOST</span></code> variable back to <code class="docutils literal notranslate"><span class="pre">db_watcher</span></code></span></p></li>
-</ul>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="w">   </span><span class="nb">cd</span><span class="w"> </span>..
-</span></code></pre></div>
-</div>
-<ul>
-<li><p><strong><a class="reference internal" href="#migrate">Migrate</a> the database:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">python3<span class="w"> </span>manage.py<span class="w"> </span>migrate
-</span></code></pre></div>
-</div>
-</li>
-<li><p><strong>Run Watcher:</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">python3<span class="w"> </span>manage.py<span class="w"> </span>runserver
-</span></code></pre></div>
-</div>
-</li>
-</ul>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Command (from <code class="docutils literal notranslate"><span class="pre">deployment/</span></code>)</p></th>
+<th class="head"><p>Purpose</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dev</span></code></p></td>
+<td><p>Start the dev stack (rebuilds the <code class="docutils literal notranslate"><span class="pre">watcher:dev</span></code> image when <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> or the <code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code> changed)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dev-logs</span></code></p></td>
+<td><p>Follow the Django and webpack logs</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dev-down</span></code></p></td>
+<td><p>Stop the dev stack (the database is kept)</p></td>
+</tr>
+</tbody>
+</table>
+<p>The <code class="docutils literal notranslate"><span class="pre">frontend</span></code> container runs <code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">ci</span></code> only when <code class="docutils literal notranslate"><span class="pre">package-lock.json</span></code> changed since the last install, and runs as your user so <code class="docutils literal notranslate"><span class="pre">node_modules</span></code> and the generated bundle stay yours. If your file changes are not detected (e.g. sources on a Windows filesystem mounted into Docker), start it with polling: <code class="docutils literal notranslate"><span class="pre">WATCHPACK_POLLING=true</span> <span class="pre">make</span> <span class="pre">dev</span></code>.</p>
 </section>
 <section id="deploy-a-simple-smtp-server-to-test-the-email-notifications">
 <h2>Deploy a simple SMTP server to test the email notifications<a class="headerlink" href="#deploy-a-simple-smtp-server-to-test-the-email-notifications" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#deploy-a-simple-smtp-server-to-test-the-email-notifications'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
 <p>If you are working on a test environment and willing to have email alerts, here is a simple way to configure the SMTP settings to make it work.</p>
-<ul class="simple">
-<li><p>Grab the docker-compose file: <a class="reference external" href="https://github.com/rnwood/smtp4dev/blob/master/docker-compose.yml" rel="nofollow noopener">here<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>.</p></li>
-<li><p>Run the command: <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span> <span class="pre">up</span></code></p></li>
-<li><p>The mails will be available here by default: <code class="docutils literal notranslate"><span class="pre">localhost:5000</span></code></p></li>
-<li><p>Modify the mail settings in the environment variables: <code class="docutils literal notranslate"><span class="pre">vi</span> <span class="pre">/.env</span></code></p>
 <ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">SMTP_SERVER=localhost</span></code></p></li>
+<li><p>Run <a class="reference external" href="https://github.com/rnwood/smtp4dev" rel="nofollow noopener">smtp4dev<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a> on the Watcher network:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker run -d --name smtp4dev --network watcher_net -p 127.0.0.1:5000:80 rnwood/smtp4dev
+</span></code></pre></div>
+</div>
+</li>
+<li><p>The mails will be available here: http://localhost:5000</p></li>
+<li><p>Modify the mail settings in the root <code class="docutils literal notranslate"><span class="pre">.env</span></code> file:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">SMTP_SERVER=smtp4dev</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EMAIL_PORT=25</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">EMAIL_FROM=from@from.com</span></code></p></li>
 </ul>
 </li>
-<li><p>Launch Watcher: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">Watcher/Watcher/manage.py</span> <span class="pre">runserver</span></code></p></li>
+<li><p>Recreate the Watcher container: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dev</span></code> (from the <code class="docutils literal notranslate"><span class="pre">deployment/</span></code> directory)</p></li>
 </ul>
 </section>
 <section id="unit-testing">
@@ -1758,44 +1730,33 @@ disable remote root logins, and load these new rules so that MySQL immediately r
 </section>
 <section id="automated-ci-cd-testing">
 <h3>Automated CI/CD Testing<a class="headerlink" href="#automated-ci-cd-testing" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#automated-ci-cd-testing'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
-<p>All tests are <strong>automatically executed</strong> in our CI/CD pipeline using <strong>GitHub Actions</strong>:</p>
+<p>All tests are <strong>automatically executed</strong> by <strong>GitHub Actions</strong> (<code class="docutils literal notranslate"><span class="pre">.github/workflows/docker-ci.yml</span></code>), <strong>inside the Docker image</strong> that is about to be published:</p>
 <ul class="simple">
-<li><p><strong>Triggered on</strong>: Push, Pull Requests, and manual workflow dispatch</p></li>
-<li><p><strong>Execution</strong>: Both back-end and front-end tests run automatically</p></li>
-<li><p><strong>Coverage</strong>: Full test suite validation before code integration</p></li>
+<li><p><strong>Triggered on</strong>: push to the <code class="docutils literal notranslate"><span class="pre">test</span></code> branch (publishes <code class="docutils literal notranslate"><span class="pre">ghcr.io/thalesgroup-cert/watcher:test</span></code>), push to the <code class="docutils literal notranslate"><span class="pre">master</span></code> branch (publishes <code class="docutils literal notranslate"><span class="pre">:latest</span></code>), and manual workflow dispatch.</p></li>
+<li><p><strong>Execution</strong>: the image is built once, the back-end tests run inside it, the image is started with its production command (gunicorn), and the Cypress tests run against it.</p></li>
+<li><p><strong>Publication</strong>: that exact image is pushed to GHCR <strong>only if every test passed</strong>.</p></li>
 </ul>
-<p>The CI/CD workflow ensures that:</p>
-<ul class="simple">
-<li><p>No broken code reaches the main branch</p></li>
-<li><p>All new features are properly tested</p></li>
-</ul>
-<p>You can view the workflow file at <code class="docutils literal notranslate"><span class="pre">.github/workflows/docker-image-latest.yml</span></code> and monitor test results in the <strong>Actions</strong> tab of the GitHub repository.</p>
+<p>You can monitor test results in the <strong>Actions</strong> tab of the GitHub repository.</p>
 </section>
 <section id="the-commands">
 <h3>The commands<a class="headerlink" href="#the-commands" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#the-commands'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h3>
-<p><strong>IMPORTANT</strong>: All test commands must be executed from the <code class="docutils literal notranslate"><span class="pre">Watcher/Watcher</span></code> directory:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="nb">cd</span><span class="w"> </span>Watcher/Watcher
-</span></code></pre></div>
-</div>
+<p>Run the tests against your dev stack (<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dev</span></code>), from the <code class="docutils literal notranslate"><span class="pre">deployment/</span></code> directory.</p>
 <section id="back-end-tests">
 <h4>Back-End Tests<a class="headerlink" href="#back-end-tests" title="Link to this heading"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h4>
-<p>To run all Django unit tests:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">python<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span>
+<p>The tests create a temporary test database, which requires the MySQL <code class="docutils literal notranslate"><span class="pre">root</span></code> account. To run all Django unit tests:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>watcher<span class="w"> </span>sh<span class="w"> </span>-c<span class="w"> </span><span class="s1">'DB_USER=root DB_PASSWORD="$DB_ROOT_PASSWORD" python manage.py test'</span>
 </span></code></pre></div>
 </div>
-<p>To run tests for a specific module:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">python<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span><span class="w"> </span>&lt;module_name&gt;
+<p>To run tests for a specific module, add its name after <code class="docutils literal notranslate"><span class="pre">test</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>watcher<span class="w"> </span>sh<span class="w"> </span>-c<span class="w"> </span><span class="s1">'DB_USER=root DB_PASSWORD="$DB_ROOT_PASSWORD" python manage.py test &lt;module_name&gt;'</span>
 </span></code></pre></div>
 </div>
-<p>To run with verbose output:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">python<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--verbosity<span class="o">=</span><span class="m">2</span>
-</span></code></pre></div>
-</div>
+<p>To run with verbose output, add <code class="docutils literal notranslate"><span class="pre">--verbosity=2</span></code>.</p>
 </section>
 <section id="front-end-tests">
 <h4>Front-End Tests<a class="headerlink" href="#front-end-tests" title="Link to this heading"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h4>
 <p>Before running front-end tests, you need to create a test superuser:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">python<span class="w"> </span>manage.py<span class="w"> </span>shell<span class="w"> </span>-c<span class="w"> </span><span class="s2">"</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>watcher<span class="w"> </span>python<span class="w"> </span>manage.py<span class="w"> </span>shell<span class="w"> </span>-c<span class="w"> </span><span class="s2">"</span>
 </span><span id="line-2"><span class="s2">from django.contrib.auth.models import User</span>
 </span><span id="line-3"><span class="s2">User.objects.create_superuser('Watcher', 'cypress@watcher.com', 'Watcher', first_name='Unit-Test Cypress', last_name='Watcher')</span>
 </span><span id="line-4"><span class="s2">"</span>
@@ -1812,14 +1773,16 @@ disable remote root logins, and load these new rules so that MySQL immediately r
 </span><span id="line-8"><span class="p">}</span>
 </span></code></pre></div>
 </div>
-<p>To run with an interactive Cypress Test Runner:</p>
+<p>To run in headless mode (as the CI does), with the official Cypress image, from the repository root:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--network<span class="w"> </span>host<span class="w"> </span>-v<span class="w"> </span><span class="s2">"</span><span class="nv">$PWD</span><span class="s2">/Watcher:/e2e"</span><span class="w"> </span>-w<span class="w"> </span>/e2e<span class="w"> </span>cypress/included:15.19.0
+</span></code></pre></div>
+</div>
+<p>(<code class="docutils literal notranslate"><span class="pre">--network</span> <span class="pre">host</span></code> lets the container reach <code class="docutils literal notranslate"><span class="pre">127.0.0.1:9020</span></code>; on Docker Desktop, it requires host networking to be enabled in the settings.)</p>
+<p>To run with the interactive Cypress Test Runner, Node.js and the Cypress desktop dependencies are needed on your machine. From the <code class="docutils literal notranslate"><span class="pre">Watcher/</span></code> directory:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">npm<span class="w"> </span>run<span class="w"> </span>cypress:open
 </span></code></pre></div>
 </div>
-<p>To run in headless mode (CI/CD):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">npm<span class="w"> </span>run<span class="w"> </span>test:e2e
-</span></code></pre></div>
-</div>
+<p>Both target http://127.0.0.1:9020 (<code class="docutils literal notranslate"><span class="pre">baseUrl</span></code> in <code class="docutils literal notranslate"><span class="pre">cypress.config.js</span></code>).</p>
 </section>
 </section>
 <section id="development-guidelines">
@@ -1853,17 +1816,8 @@ disable remote root logins, and load these new rules so that MySQL immediately r
 </section>
 <section id="modify-the-frontend">
 <h2>Modify the frontend<a class="headerlink" href="#modify-the-frontend" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#modify-the-frontend'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
-<p>If you need to modify the frontend <code class="docutils literal notranslate"><span class="pre">/Watcher/Watcher/frontend</span></code>:</p>
-<p>From <code class="docutils literal notranslate"><span class="pre">/Watcher/Watcher/</span></code>, run the command below:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">npm run dev
-</span></code></pre></div>
-</div>
-<p>Let this command run in background.
-Now, when modifying some frontend ReactJs files it will automatically build them into one file (<code class="docutils literal notranslate"><span class="pre">/Watcher/Watcher/frontend/static/frontend/main.js</span></code>).</p>
-<p><span style="color:red"><strong>[IMPORTANT]</strong> When <strong>commit</strong> you have to run <strong>1 time</strong> the command below:</span></p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">npm run build
-</span></code></pre></div>
-</div>
+<p>The React sources are in <code class="docutils literal notranslate"><span class="pre">/Watcher/Watcher/frontend/src</span></code>. With the dev stack running (<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dev</span></code>), the <code class="docutils literal notranslate"><span class="pre">frontend</span></code> container rebuilds the bundle (<code class="docutils literal notranslate"><span class="pre">/Watcher/Watcher/frontend/static/frontend/main.js</span></code>) every time you save a file: refresh your browser to see the change. Follow the build with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dev-logs</span></code>.</p>
+<p>The bundle is <strong>not versioned</strong>: there is nothing to build before committing. The Docker image builds it (<code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">run</span> <span class="pre">build</span></code>) from the sources.</p>
 </section>
 <section id="migrations-change-the-database-schema">
 <h2>Migrations: Change the database schema<a class="headerlink" href="#migrations-change-the-database-schema" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#migrations-change-the-database-schema'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
@@ -1885,7 +1839,8 @@ but you’ll need to know when to make migrations, when to run them, and the com
 <p>When you are <strong>making a change to a model</strong>, for instance, adding a new field to: <strong>/Watcher/Watcher/data_leak/models.py</strong>
 Then, you need to create a new migration based on the changes you have made:</p>
 <ul class="simple">
-<li><p>Go to <strong>/Watcher/Watcher/</strong> and run this command: <code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">manage.py</span> <span class="pre">makemigrations</span></code></p></li>
+<li><p>From the <code class="docutils literal notranslate"><span class="pre">deployment/</span></code> directory, with the dev stack running, run: <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span> <span class="pre">exec</span> <span class="pre">watcher</span> <span class="pre">python</span> <span class="pre">manage.py</span> <span class="pre">makemigrations</span></code></p></li>
+<li><p>The new migration file is written to your sources by the container, as <code class="docutils literal notranslate"><span class="pre">root</span></code>: give it back to your user with <code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">chown</span> <span class="pre">-R</span> <span class="pre">$(id</span> <span class="pre">-u):$(id</span> <span class="pre">-g)</span> <span class="pre">../Watcher/Watcher/*/migrations</span></code></p></li>
 </ul>
 <p><span style="color:red"> <strong>[IMPORTANT]</strong> Run the <code class="docutils literal notranslate"><span class="pre">makemigrations</span></code> command <strong>only once</strong></span>, when you have made <strong>all the changes</strong>.
 Otherwise, it will create <strong>several unnecessary migration files</strong>.</p>
@@ -1894,12 +1849,13 @@ Otherwise, it will create <strong>several unnecessary migration files</strong>.<
 <section id="build-the-documentation">
 <h2>Build the documentation<a class="headerlink" href="#build-the-documentation" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#build-the-documentation'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
 <p>Modify some function comments or the <code class="docutils literal notranslate"><span class="pre">/Watcher/README.md</span></code> file.</p>
-<p>Go to <code class="docutils literal notranslate"><span class="pre">/Watcher/docs</span></code> and run:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"> ./build_the_docs.sh
+<p>From the <code class="docutils literal notranslate"><span class="pre">deployment/</span></code> directory, run:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">make docs
 </span></code></pre></div>
 </div>
-<p>When commit please add the all <code class="docutils literal notranslate"><span class="pre">/Watcher/docs</span></code> folder and the <code class="docutils literal notranslate"><span class="pre">README.md</span></code> file:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">git add ../docs ../README.md
+<p>It runs <code class="docutils literal notranslate"><span class="pre">Watcher/docs/build_the_docs.sh</span></code> inside the <code class="docutils literal notranslate"><span class="pre">watcher:dev</span></code> image, which already contains Sphinx and every dependency the API pages import: nothing to install on your machine. The first run builds that image (it is reused by <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dev</span></code>). The HTML is written to <code class="docutils literal notranslate"><span class="pre">/Watcher/docs/_build/html</span></code>.</p>
+<p>When commit please add the all <code class="docutils literal notranslate"><span class="pre">/Watcher/docs</span></code> folder and the <code class="docutils literal notranslate"><span class="pre">README.md</span></code> file (from the repository root):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">git add Watcher/docs Watcher/README.md
 </span></code></pre></div>
 </div>
 </section>
@@ -1925,10 +1881,10 @@ Otherwise, it will create <strong>several unnecessary migration files</strong>.<
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
 <li><ul>
-<li><a :data-current="activeSection === '#prerequisites'" class="reference internal" href="#prerequisites">Prerequisites</a></li>
 <li><a :data-current="activeSection === '#launch-watcher'" class="reference internal" href="#launch-watcher">Launch watcher</a><ul>
-<li><a :data-current="activeSection === '#with-docker-command'" class="reference internal" href="#with-docker-command">With docker command</a></li>
-<li><a :data-current="activeSection === '#simplify-method'" class="reference internal" href="#simplify-method">Simplify method</a></li>
+<li><a :data-current="activeSection === '#prerequisites'" class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li><a :data-current="activeSection === '#install'" class="reference internal" href="#install">Install</a></li>
+<li><a :data-current="activeSection === '#the-two-configuration-files'" class="reference internal" href="#the-two-configuration-files">The two configuration files</a></li>
 <li><a :data-current="activeSection === '#migrate'" class="reference internal" href="#migrate">Migrate</a></li>
 <li><a :data-current="activeSection === '#create-admin-user'" class="reference internal" href="#create-admin-user">Create admin user</a></li>
 <li><a :data-current="activeSection === '#populate-your-database'" class="reference internal" href="#populate-your-database">Populate your database</a></li>
@@ -2031,6 +1987,7 @@ Otherwise, it will create <strong>several unnecessary migration files</strong>.<
 <li><a :data-current="activeSection === '#update-watcher'" class="reference internal" href="#update-watcher">Update Watcher</a><ul>
 <li><a :data-current="activeSection === '#update-process'" class="reference internal" href="#update-process">Update Process</a></li>
 <li><a :data-current="activeSection === '#migrate-populate-the-database-mandatory'" class="reference internal" href="#migrate-populate-the-database-mandatory">Migrate &amp; Populate the database (mandatory)</a></li>
+<li><a :data-current="activeSection === '#migrating-from-the-root-docker-compose-yml-breaking-change'" class="reference internal" href="#migrating-from-the-root-docker-compose-yml-breaking-change">Migrating from the root docker-compose.yml (breaking change)</a></li>
 <li><a :data-current="activeSection === '#managing-breaking-changes-optional'" class="reference internal" href="#managing-breaking-changes-optional">Managing Breaking Changes (optional)</a></li>
 </ul>
 </li>
