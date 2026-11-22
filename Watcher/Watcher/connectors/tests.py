@@ -133,6 +133,100 @@ class ReencryptionMigrationTest(TestCase):
         self.assertEqual(obj.overrides['EMAIL_HOST_PASSWORD'], fernet_value)
 
 
+class LegacyPublicKeyTest(TestCase):
+    """
+    Older versions encrypted connector credentials with a public default key.
+    connector_decrypt still reads such values (until migration 0007 has run),
+    and migration 0007 re-encrypts them with the instance's own key.
+    """
+
+    LEGACY_KEY = 'mGcn94AWsOHh8i4s0yHshr4wcoPnmAnsqZXZPcrRbtY='
+
+    def _legacy_encrypt(self, plain):
+        from cryptography.fernet import Fernet
+        return Fernet(self.LEGACY_KEY).encrypt(plain.encode()).decode()
+
+    def _run_migration_0007(self):
+        import importlib
+        migration_module = importlib.import_module(
+            'connectors.migrations.0007_reencrypt_with_private_encryption_key'
+        )
+
+        class _FakeApps:
+            @staticmethod
+            def get_model(app_label, model_name):
+                return ConnectorOverride
+
+        migration_module.reencrypt_with_current_key(_FakeApps(), None)
+
+    def test_settings_legacy_key_matches_the_migration_constant(self):
+        import importlib
+        from django.conf import settings
+        migration_module = importlib.import_module(
+            'connectors.migrations.0007_reencrypt_with_private_encryption_key'
+        )
+        self.assertEqual(settings.LEGACY_PUBLIC_CONNECTORS_ENCRYPTION_KEY, migration_module.LEGACY_PUBLIC_KEY)
+        self.assertEqual(settings.LEGACY_PUBLIC_CONNECTORS_ENCRYPTION_KEY, self.LEGACY_KEY)
+
+    def test_decrypt_falls_back_to_legacy_key_and_logs_warning(self):
+        with self.assertLogs('watcher.connectors', level='WARNING') as cm:
+            result = connector_decrypt(self._legacy_encrypt('legacy-secret'))
+        self.assertEqual(result, 'legacy-secret')
+        self.assertTrue(any('legacy public key' in msg for msg in cm.output))
+
+    def test_decrypt_with_current_key_does_not_warn(self):
+        encrypted = connector_encrypt('current-secret')
+        with self.assertNoLogs('watcher.connectors', level='WARNING'):
+            self.assertEqual(connector_decrypt(encrypted), 'current-secret')
+
+    def test_migration_reencrypts_legacy_values_with_current_key(self):
+        from cryptography.fernet import Fernet, InvalidToken
+        from django.conf import settings
+        obj = ConnectorOverride.objects.create(
+            connector_id='smtp',
+            overrides={
+                'EMAIL_HOST_PASSWORD': self._legacy_encrypt('mail-password'),
+                'EMAIL_HOST': 'mail.example.com',
+            },
+        )
+
+        self._run_migration_0007()
+
+        obj.refresh_from_db()
+        stored = obj.overrides['EMAIL_HOST_PASSWORD']
+        # Readable with the instance's key...
+        self.assertEqual(Fernet(settings.CONNECTORS_ENCRYPTION_KEY).decrypt(stored.encode()).decode(), 'mail-password')
+        # ...and no longer with the public one.
+        with self.assertRaises(InvalidToken):
+            Fernet(self.LEGACY_KEY).decrypt(stored.encode())
+        # Non-sensitive values are left as-is.
+        self.assertEqual(obj.overrides['EMAIL_HOST'], 'mail.example.com')
+
+    def test_migration_keeps_values_encrypted_with_current_key(self):
+        obj = ConnectorOverride.objects.create(
+            connector_id='slack',
+            overrides={'SLACK_API_TOKEN': connector_encrypt('xoxb-current')},
+        )
+
+        self._run_migration_0007()
+
+        obj.refresh_from_db()
+        self.assertEqual(connector_decrypt(obj.overrides['SLACK_API_TOKEN']), 'xoxb-current')
+
+    def test_migration_leaves_values_from_an_unknown_key_untouched(self):
+        from cryptography.fernet import Fernet
+        unknown = Fernet(Fernet.generate_key()).encrypt(b'other-secret').decode()
+        obj = ConnectorOverride.objects.create(
+            connector_id='misp',
+            overrides={'MISP_KEY': unknown},
+        )
+
+        self._run_migration_0007()
+
+        obj.refresh_from_db()
+        self.assertEqual(obj.overrides['MISP_KEY'], unknown)
+
+
 class CoreAPITest(TestCase):
     """Tests for core.py public functions - uses the real plugin registry."""
 

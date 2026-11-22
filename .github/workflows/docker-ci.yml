@@ -65,11 +65,12 @@ jobs:
     # containers use --network host to reach it.
     - name: Write the container environment file
       run: |
-        cat > "$RUNNER_TEMP/watcher.env" <<'EOF'
+        cat > "$RUNNER_TEMP/watcher.env" <<EOF
         DB_HOST=127.0.0.1
         DB_USER=root
         DB_PASSWORD=root
-        DJANGO_SECRET_KEY=ci-only-secret
+        DJANGO_SECRET_KEY=$(openssl rand -hex 32)
+        CONNECTORS_ENCRYPTION_KEY=$(openssl rand -base64 32 | tr '+/' '-_')
         EOF
 
     - name: Run back-end tests (inside the image)

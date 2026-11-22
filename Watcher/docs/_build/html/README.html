@@ -224,12 +224,16 @@ with applications…</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">DJANGO_DEBUG=False
 </span></code></pre></div>
 </div>
-<p>Also, the <strong>Django secret key</strong> must be a <strong>large random value</strong> and it must be kept secret.
-When it is left empty, Django falls back to a default key that is public in the source code: <strong>always set it</strong> in the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># generate one with: openssl rand -base64 33
+<p>Watcher <strong>requires two secret keys</strong> in the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file, and refuses to start when one of them is empty, invalid, or equal to the public default value of older versions. <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">init</span></code> generates both of them when they are empty, and never changes them once set:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"># Signs sessions and CSRF tokens. Generate with: openssl rand -hex 32
 </span><span id="line-2">DJANGO_SECRET_KEY=[large random value]
+</span><span id="line-3"># Encrypts the connector credentials stored in the database. Generate with: openssl rand -base64 32 | tr '+/' '-_'
+</span><span id="line-4">CONNECTORS_ENCRYPTION_KEY=[Fernet key]
 </span></code></pre></div>
 </div>
+<blockquote>
+<div><p><strong>Warning:</strong> never change <code class="docutils literal notranslate"><span class="pre">CONNECTORS_ENCRYPTION_KEY</span></code> once set: the connector credentials saved from the <a class="reference internal" href="#connectors">Connectors</a> page are encrypted with it, and could no longer be decrypted. Keep a copy of it with your backups.</p>
+</div></blockquote>
 <p>Change the database credentials too, in <code class="docutils literal notranslate"><span class="pre">deployment/.env</span></code>, <strong>before the first start</strong> (they are only applied when the database is created):</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">DB_PASSWORD=[strong password]
 </span><span id="line-2">DB_ROOT_PASSWORD=[another strong password]
@@ -1536,7 +1540,7 @@ the version of your MISP instance.</p>
 </span><span id="line-2">make up       # recreate the containers that changed
 </span></code></pre></div>
 </div>
-<p>Compare your <code class="docutils literal notranslate"><span class="pre">.env</span></code> files with their <code class="docutils literal notranslate"><span class="pre">.env.example</span></code> templates and add the new variables, if any.</p>
+<p>Compare your <code class="docutils literal notranslate"><span class="pre">.env</span></code> files with their <code class="docutils literal notranslate"><span class="pre">.env.example</span></code> templates and add the new variables, if any. Running <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">init</span></code> again is safe: it only creates what is missing, such as a secret key left empty.</p>
 </section>
 <section id="migrate-populate-the-database-mandatory">
 <h2>Migrate &amp; Populate the database (mandatory)<a class="headerlink" href="#migrate-populate-the-database-mandatory" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#migrate-populate-the-database-mandatory'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
@@ -1546,6 +1550,16 @@ the version of your MISP instance.</p>
 </span><span id="line-3">make populate-db
 </span></code></pre></div>
 </div>
+</section>
+<section id="required-secret-keys-breaking-change">
+<h2>Required secret keys (breaking change)<a class="headerlink" href="#required-secret-keys-breaking-change" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#required-secret-keys-breaking-change'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
+<p>Older versions fell back to <strong>public default values</strong>, written in the source code, when <code class="docutils literal notranslate"><span class="pre">DJANGO_SECRET_KEY</span></code> or <code class="docutils literal notranslate"><span class="pre">CONNECTORS_ENCRYPTION_KEY</span></code> was empty: anyone could forge sessions, or decrypt the connector credentials (MISP, TheHive, Slack, LLM API keys…) stored in the database. Watcher now refuses to start without its own keys. To upgrade an existing instance, from the <code class="docutils literal notranslate"><span class="pre">deployment/</span></code> directory:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">make init      # generates both keys in the root .env if they are empty
+</span><span id="line-2">make up
+</span><span id="line-3">make migrate   # re-encrypts the stored connector credentials with your new key
+</span></code></pre></div>
+</div>
+<p>Until <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">migrate</span></code> has run, connector credentials encrypted with the old public key are still read (a warning is logged). Changing <code class="docutils literal notranslate"><span class="pre">DJANGO_SECRET_KEY</span></code> logs every user out once; API keys keep working.</p>
 </section>
 <section id="migrating-from-the-root-docker-compose-yml-breaking-change">
 <h2>Migrating from the root docker-compose.yml (breaking change)<a class="headerlink" href="#migrating-from-the-root-docker-compose-yml-breaking-change" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#migrating-from-the-root-docker-compose-yml-breaking-change'"><svg height="1em" viewbox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg></a></h2>
@@ -1571,7 +1585,7 @@ the version of your MISP instance.</p>
 </li>
 <li><p><strong>Split your settings between the two files</strong> (see <a class="reference internal" href="#the-two-configuration-files">The two configuration files</a>):</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"> cd deployment
-</span><span id="line-2"> make init     # creates deployment/.env
+</span><span id="line-2"> make init     # creates deployment/.env, generates the secret keys of the root .env
 </span></code></pre></div>
 </div>
 <ul class="simple">
@@ -1987,6 +2001,7 @@ Otherwise, it will create <strong>several unnecessary migration files</strong>.<
 <li><a :data-current="activeSection === '#update-watcher'" class="reference internal" href="#update-watcher">Update Watcher</a><ul>
 <li><a :data-current="activeSection === '#update-process'" class="reference internal" href="#update-process">Update Process</a></li>
 <li><a :data-current="activeSection === '#migrate-populate-the-database-mandatory'" class="reference internal" href="#migrate-populate-the-database-mandatory">Migrate &amp; Populate the database (mandatory)</a></li>
+<li><a :data-current="activeSection === '#required-secret-keys-breaking-change'" class="reference internal" href="#required-secret-keys-breaking-change">Required secret keys (breaking change)</a></li>
 <li><a :data-current="activeSection === '#migrating-from-the-root-docker-compose-yml-breaking-change'" class="reference internal" href="#migrating-from-the-root-docker-compose-yml-breaking-change">Migrating from the root docker-compose.yml (breaking change)</a></li>
 <li><a :data-current="activeSection === '#managing-breaking-changes-optional'" class="reference internal" href="#managing-breaking-changes-optional">Managing Breaking Changes (optional)</a></li>
 </ul>

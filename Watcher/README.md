@@ -82,11 +82,14 @@ Django's debug mode is **off by default**: it is only enabled when `DJANGO_DEBUG
 
     DJANGO_DEBUG=False
     
-Also, the **Django secret key** must be a **large random value** and it must be kept secret.
-When it is left empty, Django falls back to a default key that is public in the source code: **always set it** in the `.env` file:
+Watcher **requires two secret keys** in the `.env` file, and refuses to start when one of them is empty, invalid, or equal to the public default value of older versions. `make init` generates both of them when they are empty, and never changes them once set:
 
-    # generate one with: openssl rand -base64 33
+    # Signs sessions and CSRF tokens. Generate with: openssl rand -hex 32
     DJANGO_SECRET_KEY=[large random value]
+    # Encrypts the connector credentials stored in the database. Generate with: openssl rand -base64 32 | tr '+/' '-_'
+    CONNECTORS_ENCRYPTION_KEY=[Fernet key]
+
+> **Warning:** never change `CONNECTORS_ENCRYPTION_KEY` once set: the connector credentials saved from the [Connectors](#connectors) page are encrypted with it, and could no longer be decrypted. Keep a copy of it with your backups.
 
 Change the database credentials too, in `deployment/.env`, **before the first start** (they are only applied when the database is created):
 
@@ -1219,7 +1222,7 @@ Then, from the `deployment/` directory:
     make pull     # pull the newer images
     make up       # recreate the containers that changed
 
-Compare your `.env` files with their `.env.example` templates and add the new variables, if any.
+Compare your `.env` files with their `.env.example` templates and add the new variables, if any. Running `make init` again is safe: it only creates what is missing, such as a secret key left empty.
 
 ## Migrate & Populate the database (mandatory)
 
@@ -1228,6 +1231,16 @@ Updates the state of the database in accordance with all current models and migr
     # from the deployment/ directory
     make migrate
     make populate-db
+
+## Required secret keys (breaking change)
+
+Older versions fell back to **public default values**, written in the source code, when `DJANGO_SECRET_KEY` or `CONNECTORS_ENCRYPTION_KEY` was empty: anyone could forge sessions, or decrypt the connector credentials (MISP, TheHive, Slack, LLM API keys...) stored in the database. Watcher now refuses to start without its own keys. To upgrade an existing instance, from the `deployment/` directory:
+
+    make init      # generates both keys in the root .env if they are empty
+    make up
+    make migrate   # re-encrypts the stored connector credentials with your new key
+
+Until `make migrate` has run, connector credentials encrypted with the old public key are still read (a warning is logged). Changing `DJANGO_SECRET_KEY` logs every user out once; API keys keep working.
 
 ## Migrating from the root docker-compose.yml (breaking change)
 
@@ -1251,7 +1264,7 @@ Older versions were started with a `docker-compose.yml` file at the repository r
 4. **Split your settings between the two files** (see [The two configuration files](#the-two-configuration-files)):
 
         cd deployment
-        make init     # creates deployment/.env
+        make init     # creates deployment/.env, generates the secret keys of the root .env
 
     - Copy the values of `TZ`, `DB_USER`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `HTTP_PROXY` and `HTTPS_PROXY` from your root `.env` to `deployment/.env`.
     - Then **remove** these variables from the root `.env`, as well as `CA_PATH`, `SEARX_HOSTNAME`, `SEARX_PROTOCOL`, `SEARX_COMMAND` and `NO_PROXY` (the `10.10.10.x` addresses are no longer used).

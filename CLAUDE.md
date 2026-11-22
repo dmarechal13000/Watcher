@@ -129,6 +129,8 @@ React 18 (not 19) + React Router v5 + Redux (`redux`, `react-redux`, `redux-thun
 
 Both `.env` files are **git-ignored**; only their `.env.example` templates are committed. `deployment/certificates/*/` (generated CA, including its private key) is git-ignored too.
 
+`DJANGO_SECRET_KEY` and `CONNECTORS_ENCRYPTION_KEY` (root `.env`) are **required**: `settings.py` raises `ImproperlyConfigured` when one is empty, equal to the old public defaults (`LEGACY_PUBLIC_*` in `settings.py`), or (for the Fernet key) malformed. `init.sh` generates them only when empty/missing. Never regenerate `CONNECTORS_ENCRYPTION_KEY` on an existing instance: `ConnectorOverride` secrets are encrypted with it. `connector_decrypt` still falls back to the legacy public key (with a warning) until migration `connectors.0007` re-encrypts everything with the instance key. Anything running `manage.py` needs both keys set (the Dockerfile passes build-only placeholders to `collectstatic`; CI generates random ones).
+
 ## Full Local Dev Deployment — `/deploy-full-e2e`
 
 Trigger phrase for this section: "deploy full e2e", "stand up the full stack", "redo the local deploy", `/deploy-full-e2e`. **Verified end-to-end on this machine** (Windows + Git Bash + Docker Desktop, no `make` installed — every command below run directly, no Makefile) — all 5 services came up healthy, migrations applied cleanly, a superuser and sample data were created, and the real React UI was confirmed served. Every gotcha below was actually hit, not inferred.

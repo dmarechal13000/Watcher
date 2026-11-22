@@ -118,7 +118,10 @@ COPY --from=frontend-builder /frontend/Watcher/frontend/static/frontend/ /app/Wa
 WORKDIR /app/Watcher
 
 # Collect static files for production purpose
-RUN python manage.py collectstatic --noinput
+# Settings require both secret keys: build-only placeholders, not kept in the image
+RUN DJANGO_SECRET_KEY=collectstatic-build-only \
+    CONNECTORS_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
+    python manage.py collectstatic --noinput
 
 
 EXPOSE 9002

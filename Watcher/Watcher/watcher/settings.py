@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 
 import os
 
+from cryptography.fernet import Fernet
+from django.core.exceptions import ImproperlyConfigured
+
 import ldap
 from django_auth_ldap.config import LDAPSearch
 from datetime import timedelta
@@ -49,17 +52,51 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret! You can set DJANGO_SECRET_KEY environment variable
-# to change it within the .env file.
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '9t4yzl@%fg*vd-@%jxn%e29v)j_pl_9-qu(onjic((jfca$z(!')
-if SECRET_KEY == '':
-    SECRET_KEY = '9t4yzl@%fg*vd-@%jxn%e29v)j_pl_9-qu(onjic((jfca$z(!'
+# SECURITY WARNING: both keys below are required and must stay secret. There is no default value:
+# older versions shipped public defaults (kept below only to reject them), so anyone could forge
+# sessions or decrypt the stored connector credentials. `make init` generates both keys in the .env file.
 
-# SECURITY WARNING: keep this key secret in production! You can set CONNECTORS_ENCRYPTION_KEY
-# environment variable to change it within the .env file. It encrypts sensitive connector credentials.
-CONNECTORS_ENCRYPTION_KEY = os.environ.get('CONNECTORS_ENCRYPTION_KEY', 'mGcn94AWsOHh8i4s0yHshr4wcoPnmAnsqZXZPcrRbtY=')
-if CONNECTORS_ENCRYPTION_KEY == '':
-    CONNECTORS_ENCRYPTION_KEY = 'mGcn94AWsOHh8i4s0yHshr4wcoPnmAnsqZXZPcrRbtY='
+# Public defaults of older versions: never accepted as keys.
+LEGACY_PUBLIC_SECRET_KEY = '9t4yzl@%fg*vd-@%jxn%e29v)j_pl_9-qu(onjic((jfca$z(!'
+LEGACY_PUBLIC_CONNECTORS_ENCRYPTION_KEY = 'mGcn94AWsOHh8i4s0yHshr4wcoPnmAnsqZXZPcrRbtY='
+
+_KEY_GENERATION_HINTS = {
+    'DJANGO_SECRET_KEY': 'openssl rand -hex 32',
+    'CONNECTORS_ENCRYPTION_KEY': "openssl rand -base64 32 | tr '+/' '-_'",
+}
+
+
+def _required_secret(name, legacy_public_value):
+    """Return the secret held by environment variable `name`, refusing to start without a real one."""
+    value = os.environ.get(name, '').strip()
+    hint = (f'Set {name} in the .env file at the repository root (`make init` in deployment/ generates it), '
+            f'or generate one with: {_KEY_GENERATION_HINTS[name]}')
+    if not value:
+        raise ImproperlyConfigured(f'{name} is not set. {hint}')
+    if value == legacy_public_value:
+        raise ImproperlyConfigured(f'{name} is the public default value of older Watcher versions. {hint}')
+    return value
+
+
+def _valid_fernet_key(name, value):
+    """Fail at startup, rather than on the first connector save, when the key is not a valid Fernet key."""
+    try:
+        Fernet(value)
+    except (ValueError, TypeError):
+        raise ImproperlyConfigured(
+            f'{name} is not a valid Fernet key (32 url-safe base64-encoded bytes). '
+            f'Generate one with: {_KEY_GENERATION_HINTS[name]}'
+        )
+    return value
+
+
+SECRET_KEY = _required_secret('DJANGO_SECRET_KEY', LEGACY_PUBLIC_SECRET_KEY)
+
+# Encrypts the sensitive connector credentials stored in the database (connectors.ConnectorOverride).
+CONNECTORS_ENCRYPTION_KEY = _valid_fernet_key(
+    'CONNECTORS_ENCRYPTION_KEY',
+    _required_secret('CONNECTORS_ENCRYPTION_KEY', LEGACY_PUBLIC_CONNECTORS_ENCRYPTION_KEY),
+)
 
 # SECURITY WARNING: DEBUG is off unless DJANGO_DEBUG is explicitly set to True (local development only)
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').strip().lower() == 'true'

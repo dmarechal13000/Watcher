@@ -14,6 +14,34 @@ class SettingsConfigurationTest(TestCase):
         self.assertIsNotNone(settings.SECRET_KEY)
         self.assertTrue(len(settings.SECRET_KEY) > 0)
 
+    def test_secret_keys_are_not_the_legacy_public_defaults(self):
+        self.assertNotEqual(settings.SECRET_KEY, settings.LEGACY_PUBLIC_SECRET_KEY)
+        self.assertNotEqual(settings.CONNECTORS_ENCRYPTION_KEY, settings.LEGACY_PUBLIC_CONNECTORS_ENCRYPTION_KEY)
+
+    def test_required_secret_refuses_missing_empty_or_legacy_values(self):
+        from watcher.settings import _required_secret
+        for env in ({}, {'DJANGO_SECRET_KEY': ''}, {'DJANGO_SECRET_KEY': '   '},
+                    {'DJANGO_SECRET_KEY': settings.LEGACY_PUBLIC_SECRET_KEY}):
+            with self.subTest(env=env), patch.dict(os.environ, env, clear=True):
+                with self.assertRaises(ImproperlyConfigured) as cm:
+                    _required_secret('DJANGO_SECRET_KEY', settings.LEGACY_PUBLIC_SECRET_KEY)
+                self.assertIn('make init', str(cm.exception))
+
+    def test_required_secret_returns_the_configured_value(self):
+        from watcher.settings import _required_secret
+        with patch.dict(os.environ, {'DJANGO_SECRET_KEY': ' a-real-secret '}):
+            self.assertEqual(
+                _required_secret('DJANGO_SECRET_KEY', settings.LEGACY_PUBLIC_SECRET_KEY), 'a-real-secret'
+            )
+
+    def test_connectors_encryption_key_must_be_a_valid_fernet_key(self):
+        from cryptography.fernet import Fernet
+        from watcher.settings import _valid_fernet_key
+        with self.assertRaises(ImproperlyConfigured):
+            _valid_fernet_key('CONNECTORS_ENCRYPTION_KEY', 'not-a-fernet-key')
+        valid = Fernet.generate_key().decode()
+        self.assertEqual(_valid_fernet_key('CONNECTORS_ENCRYPTION_KEY', valid), valid)
+
     def test_debug_mode_configuration(self):
         """Test DEBUG mode configuration from environment."""
         def debug_value():

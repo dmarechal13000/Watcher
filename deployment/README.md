@@ -30,8 +30,11 @@ variable defined in both is silently overridden by `deployment/.env`.
 
 Important secrets:
 
-- `DJANGO_SECRET_KEY`: root `.env` (when empty, Django falls back to a
-  default key that is public in the source code)
+- `DJANGO_SECRET_KEY` and `CONNECTORS_ENCRYPTION_KEY`: root `.env`. Watcher
+  refuses to start without them; `make init` generates them when empty and
+  never changes them afterwards. Never change `CONNECTORS_ENCRYPTION_KEY`
+  once set: the connector credentials stored in the database are encrypted
+  with it.
 - `DB_USER`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`: `deployment/.env`, set them
   **before the first start** (they are only applied when the database is
   created)

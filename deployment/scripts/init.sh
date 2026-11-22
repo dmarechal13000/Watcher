@@ -82,6 +82,28 @@ else
     echo "→ .env present"
 fi
 
+# Generate the secret keys Watcher refuses to start without, only when empty or missing:
+# an existing CONNECTORS_ENCRYPTION_KEY must never be replaced, or the connector credentials
+# already encrypted with it could no longer be decrypted.
+set_secret_if_empty() {
+    file="$1"; key="$2"; value="$3"
+    if grep -qE "^${key}=[^[:space:]]" "$file"; then
+        echo "→ ${key} already set"
+    elif grep -qE "^${key}=" "$file"; then
+        # Rewrite in place (not mv) to keep the file's permissions, e.g. chmod 600
+        sed "s|^${key}=.*|${key}=${value}|" "$file" > "${file}.tmp" && cat "${file}.tmp" > "$file" && rm -f "${file}.tmp"
+        echo "→ ${key} generated"
+    else
+        printf '\n%s=%s\n' "$key" "$value" >> "$file"
+        echo "→ ${key} generated"
+    fi
+}
+
+if [ -f "${WATCHER_PATH}/.env" ]; then
+    set_secret_if_empty "${WATCHER_PATH}/.env" DJANGO_SECRET_KEY "$(openssl rand -hex 32)"
+    set_secret_if_empty "${WATCHER_PATH}/.env" CONNECTORS_ENCRYPTION_KEY "$(openssl rand -base64 32 | tr '+/' '-_')"
+fi
+
 # Traefik TLS file
 TLS_FILE="${TRAEFIK_PATH}/dynamic/tls.yaml"
 if [ -f "$TLS_FILE" ]; then

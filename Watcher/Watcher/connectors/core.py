@@ -51,10 +51,21 @@ def connector_decrypt(value: str) -> str:
     try:
         return _get_fernet().decrypt(value.encode()).decode()
     except InvalidToken:
+        pass
+    # Values written by older versions are encrypted with their public default key.
+    # Migration 0007 re-encrypts them with CONNECTORS_ENCRYPTION_KEY; this fallback only
+    # keeps connectors working until it has run (e.g. between `make up` and `make migrate`).
+    try:
+        plaintext = Fernet(settings.LEGACY_PUBLIC_CONNECTORS_ENCRYPTION_KEY).decrypt(value.encode()).decode()
+    except InvalidToken:
         logger.warning(
             'connector_decrypt: decryption failed (CONNECTORS_ENCRYPTION_KEY may have changed) - returning raw value'
         )
         return value
+    logger.warning(
+        'connector_decrypt: value encrypted with the legacy public key - run `manage.py migrate` to re-encrypt it'
+    )
+    return plaintext
 
 
 def _get_registry() -> dict:
